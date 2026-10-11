@@ -19,7 +19,7 @@ If it is clearly a bug with an obvious scope (one repo, no product question, no 
 `gutix:feature-intake`. Stop here.
 
 ## 1. Classify
-- **Bug:** the product does not do what it promises or what was decided.
+- **Bug:** the product does not do what it promises or what was decided, including wrong text or visuals.
 - **Feature:** the product should do something new.
 - **Product decision:** a rule about how the product must behave (who may do what, what is allowed, defaults). It often
   opens work of both kinds: code that violates the new rule is a bug, what is missing is a feature.
@@ -30,17 +30,21 @@ If it is clearly a bug with an obvious scope (one repo, no product question, no 
 - Security or data risk: exposure, escalation, loss, wrong results. Any of these raises urgency.
 - Which repos and products it touches; whether it crosses products.
 - Size (hours, days, phases) and urgency (now, this release, backlog).
-Look at the code before judging; do not guess what exists.
+Look at the code before judging; do not guess what exists. Anything you could not check is marked "(not verified)"
+in the card.
 
 ## 3. Propose (only when there is a real choice)
+Skip this step when the user already decided ("this must never happen"): go to step 4 with their words.
 Two or three options, each with what it costs and what it risks, and one recommendation. Ask only questions whose answer
 changes what happens next. The user decides.
 
 ## 4. Record the decision (product decisions and choices between options)
-- One product: `docs/decisions/NNNN-<slug>.md` in that repo. Across products (e.g. identity and apps, the edge, staff
-  access): `docs/decisions/` in the infra repo. Format: [decision-template.md](decision-template.md). Keep it short.
+- One product: `docs/decisions/NNNN-<slug>.md` in the repo that enforces the rule (for several repos of one product, the
+  backend). Across products (e.g. identity and apps, the edge, staff access): `docs/decisions/` in the infra repo. NNNN is
+  the next free number in that folder (list it; never invent one). Format: [decision-template.md](decision-template.md). Keep it short.
+- Write the rule with the user's meaning; show it in the card. Ask again only if you had to narrow or extend it.
 - If the decision is a rule the code must always follow, add one line to the `Invariants` of `.claude/review.md` in each
-  affected repo (create it from gutix:pr-review's template if missing), linking the decision. `gutix:pr-review` then
+  repo that could break it (create it from gutix:pr-review's template if missing), linking the decision. `gutix:pr-review` then
   enforces it on every PR.
 - Record it in the same branch as the work it starts; if no work starts, commit it on its own.
 - Not recorded: bug fixes without a product choice, implementation details (they live in the code and the PR).
@@ -56,6 +60,6 @@ A short card, then the hand-off:
 Kind: product decision (+ bug)
 Impact: tenant admins with users:manage can disable or reset MFA of higher admins; security, every tenant.
 Decision: nobody acts on a user who holds permissions they do not hold; nobody touches platform admins via the tenant API.
-Recorded: identity-service docs/decisions/0007-no-acting-above-your-level.md; invariant in .claude/review.md.
+Recorded: identity-service docs/decisions/NNNN-no-acting-above-your-level.md; invariant in .claude/review.md.
 Next: gutix:bug-fix in identity-service (destructive user actions skip the check).
 ```

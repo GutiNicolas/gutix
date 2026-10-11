@@ -11,7 +11,8 @@ args:
 # Bug fix
 
 Spend in proportion: a one-line bug gets a test, the fix and a commit, not a report. The steps below scale down; the
-order does not change: **red test before any fix**.
+order does not change: **red test before any fix**. Exception: a bug with no logic (a typo in a text, a colour, a
+spacing) gets the fix alone; a test for it would not catch a realistic bug (`test-suite-prune`).
 
 ## 1. Reproduce
 - Write the test that shows the bug, at the cheapest level that shows what the user sees: unit for logic, slice or

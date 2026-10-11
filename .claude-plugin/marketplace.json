@@ -1,0 +1,18 @@
+{
+  "name": "gutix",
+  "owner": {
+    "name": "Nicolas Gutierrez"
+  },
+  "metadata": {
+    "description": "Local marketplace for the gutix plugin",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "gutix",
+      "source": "./",
+      "description": "Nicolas' engineering workflows for the org's repos: PR review panel (and more to come: feature intake, bug fix).",
+      "version": "0.1.0"
+    }
+  ]
+}

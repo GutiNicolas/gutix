@@ -1,0 +1,61 @@
+---
+name: triage
+description: Entry point when a conversation brings a problem report, a request or a product decision whose kind, impact or next step is not obvious — "something is wrong with X", "we should change how Y works", "what do we do about Z", or a review finding that turns into a product rule. Classifies it (bug, feature, product decision, question), weighs impact, proposes options with a recommendation, records decisions where code and reviews will find them, and hands off to gutix:bug-fix or gutix:feature-intake. Do NOT use it for a clear, small task: go straight to the work.
+user-invocable: true
+args:
+  - name: topic
+    description: What to triage (a bug report, request, finding or decision); defaults to the current conversation
+    required: false
+---
+
+# Triage
+
+Triage earns its cost only when the next step is unclear or a decision would otherwise be lost in a chat. Spend in
+proportion: a clear small bug takes one line and goes to `gutix:bug-fix`.
+
+## 0. Fast path (check first)
+If it is clearly a bug with an obvious scope (one repo, no product question, no security or data risk): say
+"bug, <repo>, <one-line impact>" and hand off to `gutix:bug-fix`. Same for a small, well-defined feature: hand off to
+`gutix:feature-intake`. Stop here.
+
+## 1. Classify
+- **Bug:** the product does not do what it promises or what was decided.
+- **Feature:** the product should do something new.
+- **Product decision:** a rule about how the product must behave (who may do what, what is allowed, defaults). It often
+  opens work of both kinds: code that violates the new rule is a bug, what is missing is a feature.
+- **Question:** answer it; no hand-off.
+
+## 2. Weigh the impact (only what applies, a few lines)
+- Who is affected: tenants, tenant admins, staff, integrations, everyone.
+- Security or data risk: exposure, escalation, loss, wrong results. Any of these raises urgency.
+- Which repos and products it touches; whether it crosses products.
+- Size (hours, days, phases) and urgency (now, this release, backlog).
+Look at the code before judging; do not guess what exists.
+
+## 3. Propose (only when there is a real choice)
+Two or three options, each with what it costs and what it risks, and one recommendation. Ask only questions whose answer
+changes what happens next. The user decides.
+
+## 4. Record the decision (product decisions and choices between options)
+- One product: `docs/decisions/NNNN-<slug>.md` in that repo. Across products (e.g. identity and apps, the edge, staff
+  access): `docs/decisions/` in the infra repo. Format: [decision-template.md](decision-template.md). Keep it short.
+- If the decision is a rule the code must always follow, add one line to the `Invariants` of `.claude/review.md` in each
+  affected repo (create it from gutix:pr-review's template if missing), linking the decision. `gutix:pr-review` then
+  enforces it on every PR.
+- Record it in the same branch as the work it starts; if no work starts, commit it on its own.
+- Not recorded: bug fixes without a product choice, implementation details (they live in the code and the PR).
+
+## 5. Hand off
+- Bugs → `gutix:bug-fix`, one per root cause.
+- New behaviour → `gutix:feature-intake`.
+- Pass what triage learned (impact, decision, affected repos) so the next skill does not redo it.
+
+## Output
+A short card, then the hand-off:
+```
+Kind: product decision (+ bug)
+Impact: tenant admins with users:manage can disable or reset MFA of higher admins; security, every tenant.
+Decision: nobody acts on a user who holds permissions they do not hold; nobody touches platform admins via the tenant API.
+Recorded: identity-service docs/decisions/0007-no-acting-above-your-level.md; invariant in .claude/review.md.
+Next: gutix:bug-fix in identity-service (destructive user actions skip the check).
+```

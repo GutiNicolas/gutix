@@ -76,10 +76,12 @@ in the code, e.g. infrastructure).
   6. files not reviewed, if any.
   Each item: the real risk, who could exploit it or when it breaks, and the proposed fix.
 - End with one question: which ones to fix. Fix nothing before the user answers.
+- A finding the user turns into a product rule ("this must never happen") goes through `gutix:triage` step 4, so it
+  is recorded and enforced in future reviews.
 - Never post on the PR without asking: a PR comment publishes content.
 
 ## 6. Fix (mode=fix, only what the user approved)
-One fix agent with the approved list. For **every** finding:
+One fix agent with the approved list, following `gutix:bug-fix` for each finding:
 1. **Reproduce first:** write the test that shows the bug and run it. It must fail, for the reason the finding says.
    If it passes, stop and report: the finding was wrong or the test does not reach it.
 2. Fix the code. Run the test: it must pass now.

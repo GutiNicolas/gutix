@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: "Review a PR, branch or diff for real bugs (security always, plus correctness, data, concurrency, contracts, performance, tests): one reviewer or a panel by risk, every finding verified and ranked, approved ones fixed test-first."
+description: "Review a PR, branch or diff for real bugs (security always, plus correctness, data, concurrency, contracts, performance, tests): one reviewer or a panel by risk, every finding verified and ranked, approved ones fixed test-first. For your own or your team's code; a teammate's PR goes to gutix:peer-review."
 user-invocable: true
 args:
   - name: target
@@ -82,7 +82,7 @@ in the code, e.g. infrastructure).
 - End with one question: which ones to fix. Fix nothing before the user answers.
 - A finding the user turns into a product rule ("this must never happen") goes through `gutix:triage` step 4, so it
   is recorded and enforced in future reviews.
-- Never post on the PR without asking: a PR comment publishes content.
+- Never post on the PR without asking: a PR comment publishes content. Someone else's PR: use `gutix:peer-review`.
 
 ## 6. Fix (mode=fix, only what the user approved)
 One fix agent with the approved list, following `gutix:bug-fix` for each finding:

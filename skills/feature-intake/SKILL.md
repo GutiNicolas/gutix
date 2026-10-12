@@ -1,6 +1,6 @@
 ---
 name: feature-intake
-description: Turn a roadmap requirement or a new feature request into a plan that can be built, in the org's multi-repo setup. Challenges the request, checks what already exists, maps the repos, contracts, security, data, deploy and e2e impact, splits big work into phases with a contract per phase and units per repo, then builds it (directly or through subagents) and ends in PRs for gutix:pr-review. Use when the user brings a requirement, a plan to challenge, or a feature to implement; gutix:triage hands off here.
+description: "Turn a requirement or feature request into a buildable plan across the org's repos: challenge it, map the impact, split into phases with contracts, build, and open PRs. Use for a requirement, a plan to challenge or a feature to implement."
 user-invocable: true
 args:
   - name: requirement
@@ -22,6 +22,7 @@ below is for work that crosses repos, touches security or data, or takes more th
   defaults for the rest and say so.
 
 ## 2. Map the impact (only what applies)
+Start from `gutix:impact` for the code that already exists; then decide the rest:
 - **Repos and contracts:** which repos change, and the API or event shapes between them.
 - **Security:** read the change through gutix:pr-review's `catalog.md` — new surface, who may call it, tenancy,
   platform-level access, secrets. Decide the rules now, not in review.
@@ -44,7 +45,8 @@ Product decisions taken here are recorded as in gutix:triage step 4.
 - One branch per repo for the whole effort, one commit per topic (no PR per unit).
 - Independent units in parallel through Sonnet subagents, each with its contract and the repo's rules (`CLAUDE.md`,
   `test-suite-prune`, `org-observability`). Small or tightly coupled work: do it yourself.
-- Verify each unit's report against the code and the tests before moving on; run the e2e suite across the branches.
+- Verify each unit's report against the code and run its checks (`gutix:verify`) before moving on; run the e2e
+  suite across the branches.
 - Open the PRs, then run `gutix:pr-review` on the big or risky ones.
 
 ## Report

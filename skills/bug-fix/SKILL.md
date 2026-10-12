@@ -1,6 +1,6 @@
 ---
 name: bug-fix
-description: Fix a bug test-first. Reproduce it in a test that fails for the right reason, find the root cause (not the symptom), look for the same pattern elsewhere, fix, and close the gap that let it through (missing test, log, alert or review rule). Also checks whether production data was harmed. Use when the user reports a bug, a test or CI fails for a real reason, or gutix:triage / gutix:pr-review hands one off.
+description: "Fix a bug test-first: red test for the right reason, root cause, same pattern elsewhere, fix, production data impact, and what stops it coming back. Use when a bug is reported, CI fails for a real reason, or triage or pr-review hands one off."
 user-invocable: true
 args:
   - name: bug
@@ -30,7 +30,7 @@ Search the repo (and sibling repos when the pattern is shared, e.g. every produc
 the copies in the same change, or list them for the user if they are many or in other teams' code.
 
 ## 4. Fix
-- The smallest change that removes the cause. The red test turns green; the full suite stays green.
+- The smallest change that removes the cause. The red test turns green; the rest stays green (`gutix:verify`).
 - Commit test and fix together. Follow `test-suite-prune` (keep only tests that catch realistic bugs) and
   `org-observability` (log the unexpected error once, no secrets or emails).
 - Risky fixes (auth, tenancy, money, migrations) go through `gutix:pr-review` before merge.
@@ -42,7 +42,7 @@ without the user's explicit yes.
 
 ## 6. Close the gap (one line each, only what applies)
 - Why was it not caught? Missing test (added in step 1), missing log or alert (add it if cheap), or a review that should
-  have seen it: add a line to gutix:pr-review's `catalog.md` or the repo's `.claude/review.md`.
+  have seen it. If the same kind of bug has happened before, run `gutix:learn` to turn it into a safeguard.
 - If the bug revealed a product rule nobody had written, hand it to `gutix:triage` to record it.
 
 ## Report

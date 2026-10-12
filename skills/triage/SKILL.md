@@ -1,6 +1,6 @@
 ---
 name: triage
-description: Entry point when a conversation brings a problem report, a request or a product decision whose kind, impact or next step is not obvious — "something is wrong with X", "we should change how Y works", "what do we do about Z", or a review finding that turns into a product rule. Classifies it (bug, feature, product decision, question), weighs impact, proposes options with a recommendation, records decisions where code and reviews will find them, and hands off to gutix:bug-fix or gutix:feature-intake. Do NOT use it for a clear, small task: go straight to the work.
+description: "Entry point when the kind, impact or next step of a problem, request or product decision is unclear: classifies, weighs impact, proposes options, records decisions and hands off to bug-fix or feature-intake. Not for clear, small tasks."
 user-invocable: true
 args:
   - name: topic

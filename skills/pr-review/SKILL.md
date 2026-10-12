@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: Review a pull request (any repo, any size) for real bugs. Security in every PR, plus correctness against the intent, data and migrations, concurrency, failure handling, contracts, performance, operability, tests and observability. Small PRs get one reviewer; big or risky ones a panel of parallel read-only reviewers, one per risk area. Every finding is verified in the code (critical/high ones with a failing test), then consolidated into one ranked list for the user to decide on. Approved findings are fixed test-first, one commit per topic. Use when asked to review a PR, a branch or a diff.
+description: "Review a PR, branch or diff for real bugs (security always, plus correctness, data, concurrency, contracts, performance, tests): one reviewer or a panel by risk, every finding verified and ranked, approved ones fixed test-first."
 user-invocable: true
 args:
   - name: target
@@ -21,6 +21,9 @@ few false positives. Style, naming and formatting are out of scope: linters own 
 - The repo's rules: `CLAUDE.md`, `.claude/review.md` if present (invariants and accepted risks, see
   [repo-rules-template.md](repo-rules-template.md)), and the standard skills that apply (`org-backend-standard`,
   `test-suite-prune`, `org-observability`).
+- **Checks and blast radius, once:** run `gutix:verify` (build, tests, `gh pr checks`) and `gutix:impact`. Their
+  failures and the affected callers/contracts go into every reviewer prompt, so no reviewer rediscovers them; an auth,
+  tenancy, data or contract change in the blast radius counts for the shape in step 2.
 - **Cross-repo changes:** if the same branch exists in other repos of the product (e.g. back + front + e2e), the
   contract between them is part of the review.
 
@@ -41,6 +44,7 @@ Fixed part (copy it):
 - READ-ONLY: do not edit, commit or push. Diff: `git -C <worktree> diff <base>...HEAD -- <paths>`.
 - One line on what the service is and why this PR matters.
 - The repo invariants and accepted risks from `.claude/review.md` (accepted risks are not findings).
+- The failing checks and the blast radius from step 1 (do not re-run the full suite; a focused test is fine).
 - Verify every finding by reading the code path end to end; a focused test run is allowed. Discard what you cannot
   substantiate. No style nits.
 - Mark findings the PR did not introduce as **pre-existing** (still report them if the PR makes them matter).
@@ -88,8 +92,9 @@ One fix agent with the approved list, following `gutix:bug-fix` for each finding
 3. Commit test and fix together, one commit per topic.
 Then: pull before starting, never rebase or force-push; follow `test-suite-prune` (keep only the tests that catch
 realistic bugs) and `org-observability`; update `docs/API.md` / `SECURITY.md` where behaviour changes; add or
-extend the product-e2e scenario when a user-facing flow changes; full suite green before each push; report the CI status.
+extend the product-e2e scenario when a user-facing flow changes; `gutix:verify` green before each push; report the CI status.
 
 ## 7. Learn from escapes
 When a bug reaches production that this review should have caught, add a line to [catalog.md](catalog.md) (general)
-or to the repo's `.claude/review.md` (specific), in the same PR as the fix.
+or to the repo's `.claude/review.md` (specific), in the same PR as the fix. When the same kind of miss repeats, use
+`gutix:learn` to find a safeguard that runs (test, lint rule) instead of another line.

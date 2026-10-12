@@ -1,6 +1,6 @@
 # gutix
 
-Claude Code plugin with Nicolas' engineering workflows for the org's repos.
+Claude Code plugin with Nicolas' engineering workflows.
 
 | Skill | What it does |
 | --- | --- |

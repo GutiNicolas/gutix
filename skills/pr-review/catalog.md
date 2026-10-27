@@ -31,6 +31,8 @@ Give each reviewer the sections of its area. A single reviewer gets all of them.
 ## Data and migrations
 - Expand/contract: the previous release must run against the new schema (canaries); no rename/drop in the same release.
 - Locks on big tables, backfills, irreversible operations, indexes for new queries.
+- Projections or counters updated incrementally (`x = x + 1`) instead of recomputed from their source rows: they drift and cannot be rebuilt.
+- Data scripts for a pipeline: no `ON_ERROR_STOP`, no `lock_timeout`/`statement_timeout`, unbatched writes, or scans of big tables without a plan check (`gutix:live-data-change`).
 - Long transactions holding locks; events or messages sent before commit (lost on rollback).
 
 ## Concurrency and idempotency

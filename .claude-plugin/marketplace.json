@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Local marketplace for the gutix plugin",
-    "version": "0.4.0"
+    "version": "0.5.0"
   },
   "plugins": [
     {
       "name": "gutix",
       "source": "./",
       "description": "Nicolas' engineering workflows for the org's repos: triage, feature intake, bug fix (test first), PR review, peer review, verify, impact and learn.",
-      "version": "0.4.0"
+      "version": "0.5.0"
     }
   ]
 }

@@ -11,6 +11,7 @@ Claude Code plugin with Nicolas' engineering workflows.
 | `gutix:peer-review` | Reviews a teammate's PR with pr-review's method, drafts labelled inline comments, confirms each one with you, then posts one review. Re-reviews only the delta. |
 | `gutix:verify` | Runs the checks that prove a change works and reports each as passed, failed or not run. Keeps the repo's recipe in `.claude/verify.md` so no session rediscovers how to build and test. |
 | `gutix:impact` | Blast radius with grep and git first: callers, contracts, data, config, sibling repos, and the tests to run. |
+| `gutix:live-data-change` | Changes data in a live PostgreSQL without blocking it: generated dry-run and apply files, index-only access proven by a plan test, batches with commits, lock and statement timeouts, `ON_ERROR_STOP` for pipelines, verification queries; and the delta + recomputed-projection design that keeps such changes cheap. |
 | `gutix:learn` | Turns mistakes that repeat into safeguards that run (test, lint rule, review invariant, recipe line), prunes stale instructions; persists only with evidence and the user's yes. |
 
 ## Install (local)

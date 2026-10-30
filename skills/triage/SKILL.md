@@ -52,7 +52,14 @@ changes what happens next. The user decides.
 ## 5. Hand off
 - Bugs → `gutix:bug-fix`, one per root cause.
 - New behaviour → `gutix:feature-intake`.
-- Pass what triage learned (impact, decision, affected repos) so the next skill does not redo it.
+- Pass what triage learned (impact, decision, affected repos) so the next skill does not redo it, **through files,
+  not this conversation**:
+  - Fast path, or one small bug or feature: continue here.
+  - Anything bigger (a feature that needs phases, several root causes, several repos): write the card into the repo
+    (the decision record, or `docs/features/<slug>/ROADMAP.md` from `~/.claude/templates/feature/` with Goal,
+    Decisions and the open questions filled) and hand each piece to a **fresh session** with a short brief that points
+    to that file: one `gutix:feature-intake` session for the feature, one `gutix:bug-fix` session (Sonnet, own
+    worktree) per independent root cause. Then end this session; don't follow the work from here.
 
 ## Output
 A short card, then the hand-off:
@@ -61,5 +68,5 @@ Kind: product decision (+ bug)
 Impact: tenant admins with users:manage can disable or reset MFA of higher admins; security, every tenant.
 Decision: nobody acts on a user who holds permissions they do not hold; nobody touches platform admins via the tenant API.
 Recorded: identity-service docs/decisions/NNNN-no-acting-above-your-level.md; invariant in .claude/review.md.
-Next: gutix:bug-fix in identity-service (destructive user actions skip the check).
+Next: gutix:bug-fix in identity-service (destructive user actions skip the check), in a fresh session from the decision record.
 ```

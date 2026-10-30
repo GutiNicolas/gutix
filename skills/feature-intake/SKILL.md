@@ -1,6 +1,6 @@
 ---
 name: feature-intake
-description: "Turn a requirement or feature request into a buildable plan across the org's repos: challenge it, map the impact, split into phases with contracts, build, and open PRs. Use for a requirement, a plan to challenge or a feature to implement."
+description: "Turn a requirement or feature request into a buildable plan across the org's repos: challenge it, map the impact, split into phases with contracts, written as a roadmap and task files that fresh worker sessions build. Use for a requirement, a plan to challenge or a feature to implement."
 user-invocable: true
 args:
   - name: requirement
@@ -32,23 +32,31 @@ Start from `gutix:impact` for the code that already exists; then decide the rest
 - **e2e:** one scenario per new user-facing flow in product-e2e.
 Product decisions taken here are recorded as in gutix:triage step 4.
 
-## 3. Shape the work
+## 3. Shape the work into files
+The plan lives in the repo, not in this conversation: this session plans and ends, and every later step runs in a
+fresh session that starts from the files alone. Use the templates in `~/.claude/templates/feature/`, under
+`docs/features/<slug>/` (or the repo's own plan folder; for several repos, the repo that owns the main contract).
 - One phase if it fits in one reviewable change per repo. Otherwise phases, each one shippable on its own, ordered
   so nothing deployed depends on a later phase.
-- For each phase with more than one repo, a **contract**: the decisions that complete the design, a table of units
-  (unit, repo, scope), the API/event shapes, and the tests that matter. Short and specific enough that a subagent can
-  build its unit without this conversation. Keep it in the scratchpad while working; what must outlive the work goes
-  into the repo docs (API.md, design docs) or a decision record.
-- Show the plan, get the user's yes, then build.
+- `ROADMAP.md`: goal, decisions (with the reason), contracts (API/event shapes, security rules from step 2), the
+  phases with a status table of tasks, open questions.
+- One `tasks/T-<nn>.md` per unit: repo, base branch, scope, contract, and **executable acceptance criteria** (each
+  with the command that proves it, e2e included for user-facing flows). Specific enough that a Sonnet worker builds
+  it without this conversation.
+- Iterate on the files: when the user edits or comments, read the change and answer it; don't restate the plan.
+- When the user approves, record it in the roadmap's Log and **end this session**. Don't build from here.
 
-## 4. Build
-- One branch per repo for the whole effort, one commit per topic (no PR per unit).
-- Independent units in parallel through Sonnet subagents, each with its contract and the repo's rules (`CLAUDE.md`,
-  `test-suite-prune`, `org-observability`). Small or tightly coupled work: do it yourself.
-- Verify each unit's report against the code and run its checks (`gutix:verify`) before moving on; run the e2e
-  suite across the branches.
-- Open the PRs, then run `gutix:pr-review` on the big or risky ones.
+## 4. Build (fresh sessions, not this one)
+- **Dispatch** (a fresh, short session): read the roadmap, start one worker session per ready task (own worktree,
+  Sonnet) with `worker-brief.md`, which points to the task file. Then end; don't wait for or follow the workers.
+- **Workers**: implement one task, run its acceptance criteria, fill its "Result", open the PR, set the roadmap row
+  to "PR open", end. A wrong or blocked spec is written down and the row set to "blocked", never improvised around.
+- **Review** (a fresh session per PR): `gutix:pr-review` of the diff against its task file; set the row to "merged"
+  or "changes asked". On the main model only for contracts, security or tricky state.
+- **Status and next phase**: a fresh session reads the status table. Changes to the plan go into the roadmap and the
+  task files, with a line in the Log.
+- Small or tightly coupled work (the five-line-plan case above) stays in one session and skips the files.
 
 ## Report
-What will exist when done, the phases and their status, decisions taken (with links), what the user must do (secrets,
-dashboards, approvals), and the PRs.
+The files written (roadmap and tasks, with paths), the phases, decisions taken, what the user must do (secrets,
+dashboards, approvals), and the next step: the dispatch session to start.

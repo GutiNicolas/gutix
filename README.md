@@ -5,7 +5,7 @@ Claude Code plugin with Nicolas' engineering workflows.
 | Skill | What it does |
 | --- | --- |
 | `gutix:triage` | Entry point when the kind or next step is unclear: classifies (bug, feature, product decision), weighs impact, proposes options, records decisions (`docs/decisions/`, review invariants) and hands off. Fast path for clear small bugs. |
-| `gutix:feature-intake` | Turns a requirement into a plan: challenge, impact map, phases with a contract per phase and units per repo, build, PRs. |
+| `gutix:feature-intake` | Turns a requirement into a plan in the repo: challenge, impact map, a roadmap with contracts and one task file per unit with executable acceptance criteria; dispatch, workers and review then run in fresh sessions. |
 | `gutix:bug-fix` | Red test first, root cause, same pattern elsewhere, fix, production data check, close the gap. |
 | `gutix:pr-review` | Reviews a PR with one reviewer or a panel by risk area, verifies every finding (critical/high with a failing test), consolidates one ranked list, and fixes the approved ones test-first. |
 | `gutix:peer-review` | Reviews a teammate's PR with pr-review's method, drafts labelled inline comments, confirms each one with you, then posts one review. Re-reviews only the delta. |

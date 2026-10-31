@@ -43,16 +43,30 @@ fresh session that starts from the files alone. Use the templates in `~/.claude/
 - One `tasks/T-<nn>.md` per unit: repo, base branch, scope, contract, and **executable acceptance criteria** (each
   with the command that proves it, e2e included for user-facing flows). Specific enough that a Sonnet worker builds
   it without this conversation.
+- Tasks that can run in the same wave and add a migration get their `V<n>` assigned in the task file: workers cut
+  from the same main all pick the same "next free" number.
 - Iterate on the files: when the user edits or comments, read the change and answer it; don't restate the plan.
 - When the user approves, record it in the roadmap's Log and **end this session**. Don't build from here.
 
 ## 4. Build (fresh sessions, not this one)
+Each phase builds on one **release branch**, `release/<slug>-p<n>`, cut from main by the first dispatch of the
+phase. Task files name it as their base branch; task PRs target it, never main. One review per release, not per task.
 - **Dispatch** (a fresh, short session): read the roadmap, start one worker session per ready task (own worktree,
-  Sonnet) with `worker-brief.md`, which points to the task file. Then end; don't wait for or follow the workers.
-- **Workers**: implement one task, run its acceptance criteria, fill its "Result", open the PR, set the roadmap row
-  to "PR open", end. A wrong or blocked spec is written down and the row set to "blocked", never improvised around.
-- **Review** (a fresh session per PR): `gutix:pr-review` of the diff against its task file; set the row to "merged"
-  or "changes asked". On the main model only for contracts, security or tricky state.
+  Sonnet, from the release branch) with `worker-brief.md`, which points to the task file. Then end; don't wait for
+  or follow the workers.
+- **Workers**: implement one task, run its acceptance criteria, fill its "Result", open the PR against the release
+  branch, set the roadmap row to "PR open", end. A wrong or blocked spec is written down and the row set to
+  "blocked", never improvised around.
+- **Integrate** (a fresh, short session, or the next dispatch): squash-merge every task PR whose `verify` is green
+  into the release branch, one commit per task (`T-<nn>: <title>`), resolving the shared conflicts once (roadmap
+  rows, migration numbers), then run the repo's full check once on the combined branch (its own exit code, not a
+  wrapper's): green task PRs don't cover what they break together. Set the rows to "integrated". No review here. Later waves start from the release branch.
+- **Review** (a fresh session, on the release PR to main): `gutix:pr-review` of the release diff, walked task commit
+  by task commit against each task file; a panel by risk when the diff is large. On the main model when it holds
+  contracts, security or tricky state. Fixes are commits on the release branch (`fix(T-<nn>): …`). If a wave must be
+  reviewed before the next one builds on it, review only the diff since the last reviewed commit.
+- **Release**: when the review is clean and CI (with the `e2e` label) is green, merge the release PR to main with a
+  merge commit (keeps the per-task commits) and set the rows to "merged".
 - **Status and next phase**: a fresh session reads the status table. Changes to the plan go into the roadmap and the
   task files, with a line in the Log.
 - Small or tightly coupled work (the five-line-plan case above) stays in one session and skips the files.

@@ -46,7 +46,9 @@ fresh session that starts from the files alone. Use the templates in `~/.claude/
 - Tasks that can run in the same wave and add a migration get their `V<n>` assigned in the task file: workers cut
   from the same main all pick the same "next free" number.
 - Iterate on the files: when the user edits or comments, read the change and answer it; don't restate the plan.
-- When the user approves, record it in the roadmap's Log and **end this session**. Don't build from here.
+- When the user approves, record it in the roadmap's Log, get the plan files onto main (a docs-only PR the user
+  merges) and **end this session**. New sessions start from the base branch, so a plan that lives only on a side
+  branch is invisible to them. Don't build from here.
 
 ## 4. Build (fresh sessions, not this one)
 Each phase builds on one **release branch**, `release/<slug>-p<n>`, cut from main by the first dispatch of the

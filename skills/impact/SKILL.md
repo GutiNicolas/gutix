@@ -19,8 +19,8 @@ with the same contract usually stops here: its callers are not affected.
 
 ## 2. Who depends on it (deterministic)
 - **Callers:** `rg -l '\b<Symbol>\b'` in the repo; for shared contracts also in the product's sibling repos
-  (back + front + e2e, e.g. `~/projects/product-*`).
-- **Contracts:** `docs/API.md`, OpenAPI specs, event schemas, front API clients, product-e2e scenarios that call the
+  (back + front + e2e, e.g. `~/projects/<product>-*`).
+- **Contracts:** `docs/API.md`, OpenAPI specs, event schemas, front API clients, e2e-repo scenarios that call the
   endpoint.
 - **Data:** migrations in the diff, and readers/writers of the touched tables or columns (`rg` the column name).
 - **Config:** new or renamed env vars, flags or secrets → the infra repo must change too.
@@ -33,10 +33,10 @@ A caller whose use of the changed behaviour is not clear from the matching line:
 ```
 Changed: TokenService.issue() now rejects expired refresh tokens (contract change)
 Affected (confirmed): AuthController.refresh, web-ui src/api/auth.ts (retries on 401)
-Affected (probable): product-e2e session-expiry scenario
+Affected (probable): e2e session-expiry scenario
 Contracts: POST /api/v1/token/refresh returns 401 instead of 200 + stale token
 Data: none   Config: none
-Tests to run: TokenServiceTest, AuthControllerIT, product-e2e session-expiry
+Tests to run: TokenServiceTest, AuthControllerIT, e2e session-expiry
 Review: auth → gutix:pr-review panel
 ```
 "Probable" means the grep matched but the code path was not traced. Hand the test scope to `gutix:verify`.

@@ -108,12 +108,12 @@ sha>`). Dispatch starts no task of phase n+1 while release p<n> is not signed of
 Branch `feat/human-ownership-p1` → PR to master. Release PR: — · last reviewed: — · last signed off: — · open: —
 | Task | Repo | Depends on | Status | PR | Note |
 |---|---|---|---|---|---|
-| [T-09](tasks/T-09.md) Remove private names from the public skills | gutix | — | todo | | first: the others edit these files |
-| [T-01](tasks/T-01.md) Templates into gutix, with tier and decisions | gutix | T-09 | todo | | |
-| [T-02](tasks/T-02.md) New skill gutix:sign-off | gutix | T-01 | todo | | |
-| [T-03](tasks/T-03.md) pr-review: attention map, what checks prove, human-read paths | gutix | T-02 | todo | | |
-| [T-04](tasks/T-04.md) feature-intake: intent first, complex decisions, tiers, gates | gutix | T-01, T-02 | todo | | |
-| [T-05](tasks/T-05.md) README, version 0.7.0, trial sign-off on a real release | gutix | T-01–T-04 | todo | | |
+| [T-09](tasks/T-09.md) Remove private names from the public skills | gutix | — | done | | first: the others edit these files |
+| [T-01](tasks/T-01.md) Templates into gutix, with tier and decisions | gutix | T-09 | done | | |
+| [T-02](tasks/T-02.md) New skill gutix:sign-off | gutix | T-01 | done | | |
+| [T-03](tasks/T-03.md) pr-review: attention map, what checks prove, human-read paths | gutix | T-02 | done | | |
+| [T-04](tasks/T-04.md) feature-intake: intent first, complex decisions, tiers, gates | gutix | T-01, T-02 | done | | |
+| [T-05](tasks/T-05.md) README, version 0.7.0, trial sign-off on a real release | gutix | T-01–T-04 | in progress | | |
 
 ### Phase 2: tighten and propagate (after phase 1 is signed off)
 Branch `feat/human-ownership-p2` → PR to master. Release PR: — · last reviewed: — · last signed off: — · open: —
@@ -132,3 +132,6 @@ Branch `feat/human-ownership-p2` → PR to master. Release PR: — · last revie
 - 2026-11-03: D9 added (model by cost of being wrong); scopes of T-02, T-04, T-06 updated.
 - 2026-11-03: Nicolas approved D6; Q1 → D10, Q2 → D11, Q3 → T-05 trial target chosen (named only locally, D12).
 - 2026-11-03: Hypothesis written by Nicolas; D12–D15 and T-09 added from it and from "these repos are public".
+- 2026-11-03: plan approved via GutiNicolas/gutix#1; phase 1 built in one session on `feat/human-ownership-p1` (D6).
+- 2026-11-03: trial 1 caught that sign-off wrote in English for a Spanish-speaking user; fix(T-02): page, quiz and grading in the user's language.
+- 2026-11-03: trial 1 (a past security release of a private project): sections 1–5 useful, quiz 0/4, not recorded at Nicolas' request; two misses became bug-fix sessions in that project. Lessons for phase 2 in T-05's Result.

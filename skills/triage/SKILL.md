@@ -26,7 +26,7 @@ If it is clearly a bug with an obvious scope (one repo, no product question, no 
 - **Question:** answer it; no hand-off.
 
 ## 2. Weigh the impact (only what applies, a few lines)
-- Who is affected: tenants, tenant admins, staff, integrations, everyone.
+- Who is affected: tenants, tenant admins, platform staff, integrations, everyone.
 - Security or data risk: exposure, escalation, loss, wrong results. Any of these raises urgency.
 - Which repos and products it touches; whether it crosses products.
 - Size (hours, days, phases) and urgency (now, this release, backlog).
@@ -40,7 +40,7 @@ changes what happens next. The user decides.
 
 ## 4. Record the decision (product decisions and choices between options)
 - One product: `docs/decisions/NNNN-<slug>.md` in the repo that enforces the rule (for several repos of one product, the
-  backend). Across products (e.g. identity and apps, the edge, staff access): `docs/decisions/` in the infra repo. NNNN is
+  backend). Across products (identity and an app, the edge, staff access): `docs/decisions/` in the infra repo. NNNN is
   the next free number in that folder (list it; never invent one). Format: [decision-template.md](decision-template.md). Keep it short.
 - Write the rule with the user's meaning; show it in the card. Ask again only if you had to narrow or extend it.
 - If the decision is a rule the code must always follow, add one line to the `Invariants` of `.claude/review.md` in each
@@ -56,10 +56,11 @@ changes what happens next. The user decides.
   not this conversation**:
   - Fast path, or one small bug or feature: continue here.
   - Anything bigger (a feature that needs phases, several root causes, several repos): write the card into the repo
-    (the decision record, or `docs/features/<slug>/ROADMAP.md` from `~/.claude/templates/feature/` with Goal,
-    Decisions and the open questions filled) and hand each piece to a **fresh session** with a short brief that points
-    to that file: one `gutix:feature-intake` session for the feature, one `gutix:bug-fix` session (Sonnet, own
-    worktree) per independent root cause. Then end this session; don't follow the work from here.
+    (the decision record, or `docs/features/<slug>/ROADMAP.md` from
+    [its template](../feature-intake/templates/ROADMAP.md) with Goal, Decisions and the open questions filled) and
+    hand each piece to a **fresh session** with a short brief that points to that file: one `gutix:feature-intake`
+    session for the feature, one `gutix:bug-fix` session (Sonnet, own worktree) per independent root cause. Then end
+    this session; don't follow the work from here.
 
 ## Output
 A short card, then the hand-off:

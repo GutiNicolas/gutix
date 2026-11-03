@@ -4,12 +4,13 @@ Give each reviewer the sections of its area. A single reviewer gets all of them.
 
 ## Always
 - Secrets, tokens, codes or email addresses in logs, errors or responses.
-- Config defaults that are unsafe or broken in production; new env vars the chart (the infra repo) must provide.
+- Config defaults that are unsafe or broken in production; new env vars the chart (infra repo) must provide.
 - A timeout on every network call; errors swallowed or turned into success.
 
 ## Intent
 - The diff against the ticket, design doc or PR description: missing cases, unrequested behaviour changes.
 - Edges: time zones and dates, money and rounding, empty lists, nulls, pagination ends, unicode, very large inputs.
+- Tests that mirror the implementation (assert what the code does, not what was asked): green, and blind to the bug.
 
 ## Sessions and authentication
 - Bypasses; session fixation; login CSRF; open redirects; CSRF gaps on some HTTP methods or paths.
@@ -40,7 +41,7 @@ Give each reviewer the sections of its area. A single reviewer gets all of them.
 - Check-then-act races; unique constraints as the real guard.
 
 ## Failure handling
-- What happens when the database, the identity provider or a third party is down or slow: retries with backoff, circuit breaking,
+- What happens when the database, the IdP or another service is down or slow: retries with backoff, circuit breaking,
   user-facing error. Security decisions fail closed.
 
 ## Contracts
@@ -53,7 +54,7 @@ Give each reviewer the sections of its area. A single reviewer gets all of them.
 ## Tests and observability
 - Tests that would catch a realistic bug and survive a refactor (`test-suite-prune`); e2e scenario for each new
   user-facing flow.
-- Unexpected errors logged once with the stack, milestones with attributes, no mechanical logs (`org-observability`).
+- Unexpected errors logged once with the stack, milestones with attributes, no mechanical logs (observability standard).
 
 ## Fronts
 - XSS (`dangerouslySetInnerHTML`, URLs from data), CSP, tokens or PII in browser storage, open redirects, secrets in

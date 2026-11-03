@@ -13,7 +13,7 @@ Last checked: YYYY-MM-DD
 | Unit, all | | | |
 | Unit, one test | | | e.g. `-Dtest=Class#method`, `vitest run path -t name` |
 | Integration | | | local deps it needs |
-| e2e | | | product-e2e scenario(s) that cover this repo |
+| e2e | | | e2e-repo scenario(s) that cover this repo |
 
 ## Local dependencies
 How to start what the tests need (DB, Redis, Testcontainers, docker compose) and how to stop it.

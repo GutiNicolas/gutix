@@ -19,9 +19,9 @@ author's time and your credibility, so post less and be sure of it. Never edit, 
 - **Re-review:** if you reviewed it before, review only `git diff <last reviewed commit>..<head>` and check whether each
   of your open threads was addressed (fixed, answered, or still open).
 - Check it out away from your work: `git worktree add <scratchpad>/pr-<n>` + `gh pr checkout <n>` inside it.
-- Rules that apply: the repo's `CLAUDE.md` and `.claude/review.md`. The org skills (`org-backend-standard`,
-  `test-suite-prune`, `org-observability`, product-e2e) apply only in the org's repos; elsewhere, the team's own
-  conventions in the repo are the bar, not ours.
+- Rules that apply: the repo's `CLAUDE.md` and `.claude/review.md`. Your own standard skills (the ones your global
+  `CLAUDE.md` names: backend, observability, `test-suite-prune`, the e2e repo) apply only in your repos; elsewhere,
+  the team's own conventions in the repo are the bar, not ours.
 
 ## 2. Review
 Run `gutix:pr-review` steps 2–5 on the PR (shape, reviewer prompt, severity and certainty, verify and consolidate),

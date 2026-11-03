@@ -16,7 +16,7 @@ spacing) gets the fix alone; a test for it would not catch a realistic bug (`tes
 
 ## 1. Reproduce
 - Write the test that shows the bug, at the cheapest level that shows what the user sees: unit for logic, slice or
-  integration for an endpoint or a query, an product-e2e scenario for a broken user flow.
+  integration for an endpoint or a query, a scenario in the product's e2e repo for a broken user flow.
 - Run it: it must fail, and for the reason the report describes. A test that fails for another reason proves nothing.
 - Cannot reproduce? Collect evidence before guessing: the New Relic logs and events for the `uow` or user id, the data
   involved, the versions deployed. Ask the user for what is missing. Do not "fix" what you cannot show.
@@ -32,7 +32,7 @@ the copies in the same change, or list them for the user if they are many or in 
 ## 4. Fix
 - The smallest change that removes the cause. The red test turns green; the rest stays green (`gutix:verify`).
 - Commit test and fix together. Follow `test-suite-prune` (keep only tests that catch realistic bugs) and
-  `org-observability` (log the unexpected error once, no secrets or emails).
+  the observability standard the repo's `CLAUDE.md` names (log the unexpected error once, no secrets or emails).
 - Risky fixes (auth, tenancy, money, migrations) go through `gutix:pr-review` before merge.
 
 ## 5. Production data

@@ -18,9 +18,9 @@ few false positives. Style, naming and formatting are out of scope: linters own 
 
 ## 1. Read the context
 - The diff: `git diff <base>...HEAD --stat`, then by path. The PR description and the ticket or design doc it implements.
-- The repo's rules: `CLAUDE.md`, `.claude/review.md` if present (invariants and accepted risks, see
-  [repo-rules-template.md](repo-rules-template.md)), and the standard skills that apply (`org-backend-standard`,
-  `test-suite-prune`, `org-observability`).
+- The repo's rules: `CLAUDE.md`, `.claude/review.md` if present (invariants, accepted risks and Human-read paths, see
+  [repo-rules-template.md](repo-rules-template.md)), and the standard skills it names (backend, observability,
+  `test-suite-prune`).
 - **Checks and blast radius, once:** run `gutix:verify` (build, tests, `gh pr checks`) and `gutix:impact`. Their
   failures and the affected callers/contracts go into every reviewer prompt, so no reviewer rediscovers them; an auth,
   tenancy, data or contract change in the blast radius counts for the shape in step 2.
@@ -53,9 +53,10 @@ Fixed part (copy it):
   of files you did not get to.
 
 Variable part: the area's files, its design docs, and its lines from [catalog.md](catalog.md).
-The "intent and tests" reviewer gets the PR description/ticket and checks: does the diff do what was asked, what is
-missing, what changed that nobody asked for, do the tests catch realistic bugs, is there an e2e scenario for each new
-user-facing flow.
+The "intent and tests" reviewer gets the PR description/ticket (or the task's acceptance criteria) and checks: does
+the diff do what was asked, what is missing, what changed that nobody asked for, is there an e2e scenario for each new
+user-facing flow. It compares the tests with the spec, not with the code: a test that asserts what the code does
+rather than what was asked is a finding, and so is asked-for behaviour that no test reaches.
 
 ## 4. Severity and certainty (same scale for every reviewer)
 | Severity | Meaning | Example |
@@ -77,12 +78,15 @@ in the code, e.g. infrastructure).
 - Tell the user, in their language and in product terms:
   1. what was not found (no critical/high, no cross-tenant access...), so the reader knows the coverage;
   2. **fix before merge**; 3. **recommended**; 4. **pre-existing**; 5. **to confirm in infrastructure**;
-  6. files not reviewed, if any.
-  Each item: the real risk, who could exploit it or when it breaks, and the proposed fix.
+  6. files not reviewed, if any; 7. **attention map**: the hunks in human-read paths (`.claude/review.md`, else
+  sign-off's default list), `file:line` and why, even with no findings; 8. **what the checks prove and don't**.
+  Each finding: the real risk, who could exploit it or when it breaks, and the proposed fix.
 - End with one question: which ones to fix. Fix nothing before the user answers.
 - A finding the user turns into a product rule ("this must never happen") goes through `gutix:triage` step 4, so it
   is recorded and enforced in future reviews.
 - Never post on the PR without asking: a PR comment publishes content. Someone else's PR: use `gutix:peer-review`.
+- A release PR goes to `gutix:sign-off` before merge; another PR that touches human-read paths gets it offered, not
+  required.
 
 ## 6. Fix (mode=fix, only what the user approved)
 One fix agent with the approved list, following `gutix:bug-fix` for each finding:
@@ -91,8 +95,8 @@ One fix agent with the approved list, following `gutix:bug-fix` for each finding
 2. Fix the code. Run the test: it must pass now.
 3. Commit test and fix together, one commit per topic.
 Then: pull before starting, never rebase or force-push; follow `test-suite-prune` (keep only the tests that catch
-realistic bugs) and `org-observability`; update `docs/API.md` / `SECURITY.md` where behaviour changes; add or
-extend the product-e2e scenario when a user-facing flow changes; `gutix:verify` green before each push; report the CI status.
+realistic bugs) and the observability standard; update `docs/API.md` / `SECURITY.md` where behaviour changes; add or
+extend the product's e2e scenario when a user-facing flow changes; `gutix:verify` green before each push; report the CI status.
 
 ## 7. Learn from escapes
 When a bug reaches production that this review should have caught, add a line to [catalog.md](catalog.md) (general)

@@ -28,7 +28,8 @@ Cheapest that proves the change, deterministic first:
 2. The tests for what changed: the scope from `gutix:impact` if it ran, otherwise the tests next to the changed files
    and the ones that name the changed symbols (`rg`).
 3. Integration or e2e only when the change crosses a boundary (endpoint, query, migration, contract, user flow).
-4. Full suite before a push or PR; on a PR, also `gh pr checks`.
+4. Full suite: when the repo's CI runs it on the PR, push and read `gh pr checks` (in the background) instead of
+   running it locally too; otherwise run it before the push.
 Never skip a check the repo or the task requires because the change looks small.
 
 ## 3. Run and read

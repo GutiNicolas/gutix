@@ -68,8 +68,9 @@ phase. Task files name it as their base branch; task PRs target it, never main. 
   in the task's "Result", never improvised around.
 - **Integrate** (a fresh, short session on Haiku, or the next dispatch): squash-merge every task PR whose `verify` is
   green into the release branch, one commit per task (`T-<nn>: <title>`), resolving the shared conflicts once (migration
-  numbers), then run the repo's full check once on the combined branch (its own exit code, not a wrapper's): green
-  task PRs don't cover what they break together. A conflict beyond migration numbers, or a red combined check: hand
+  numbers), then open or update the release PR: its CI is the one combined check (green task PRs don't cover what
+  they break together), never a local run as well; the workers' checks are not rerun. A conflict beyond migration
+  numbers, or red release CI: hand
   off to Sonnet. Set the rows to "integrated" ("blocked" when a "Result" says so). Later waves start from here.
 - **Review** (a fresh session, on the release PR to main): `gutix:pr-review` of the release diff, walked task commit
   by task commit against each task file; a panel by risk when the diff is large. On the main model when it holds

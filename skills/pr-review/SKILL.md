@@ -21,7 +21,8 @@ few false positives. Style, naming and formatting are out of scope: linters own 
 - The repo's rules: `CLAUDE.md`, `.claude/review.md` if present (invariants, accepted risks and Human-read paths, see
   [repo-rules-template.md](repo-rules-template.md)), and the standard skills it names (backend, observability,
   `test-suite-prune`).
-- **Checks and blast radius, once:** run `gutix:verify` (build, tests, `gh pr checks`) and `gutix:impact`. Their
+- **Checks and blast radius, once:** read `gh pr checks` for the head sha and don't re-run what CI ran on it (full
+  suite, e2e); run `gutix:verify` only for a check CI lacks. Then `gutix:impact`. Their
   failures and the affected callers/contracts go into every reviewer prompt, so no reviewer rediscovers them; an auth,
   tenancy, data or contract change in the blast radius counts for the shape in step 2.
 - **Cross-repo changes:** if the same branch exists in other repos of the product (e.g. back + front + e2e), the

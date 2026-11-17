@@ -22,4 +22,4 @@ How to start what the tests need (DB, Redis, Testcontainers, docker compose) and
 User flows no automated check covers, and how to try them locally (URL, seed user from the fixtures).
 
 ## Limits
-What cannot run here and why (secrets, cloud resources, OS). Known flaky tests.
+What cannot run here and why (secrets, cloud resources, OS). Not a list of flaky tests to retry: a flaky test is fixed or deleted (see the skill).

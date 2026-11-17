@@ -28,7 +28,7 @@ A single observation goes in the report as "seen once", not in a file.
 1. **Executable:** a test, a lint/ArchUnit/Semgrep rule, a CI step, a script.
 2. **Review rule:** an invariant in the repo's `.claude/review.md`, or a line in gutix:pr-review's `catalog.md` if it
    applies to every repo.
-3. **Verify recipe:** `.claude/verify.md` (a command, a dependency, a flaky test).
+3. **Verify recipe:** `.claude/verify.md` (a command, a dependency, a limit).
 4. **Skill edit:** the gutix skill whose step led to the mistake.
 5. **Instruction line:** the repo's `CLAUDE.md`. Last resort; never the global one from a single repo's lesson.
 A product rule ("this must never happen") goes through `gutix:triage` step 4 instead.

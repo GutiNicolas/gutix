@@ -34,10 +34,16 @@ Never skip a check the repo or the task requires because the change looks small.
 
 ## 3. Run and read
 - Run them; read failures from the output, not from memory. Quote the one line that matters, not the whole log.
-- A failure the change caused: fix it (or hand it to `gutix:bug-fix`) and re-run that check.
+- A failure the change caused: fix it (or hand it to `gutix:bug-fix`) and re-run that check. Still failing after
+  three fix attempts on the same failure: stop, report it with what you tried and your best guess, and ask the user.
 - A failure that was already there: confirm on the base branch (`git stash` or a worktree) before calling it
   pre-existing.
-- Flaky: re-run once. If it flips, say so and add it to "Limits" in the recipe.
+- **Flaky (passes and fails on the same code): never retry until green**, never add sleeps, longer timeouts or
+  `@Disabled`/`skip` to get past it. A retry that passes proves nothing and teaches the next session to retry. Find
+  the cause (order dependence, shared state, time, a race, a container not ready) and fix it in the test or the code.
+  If you cannot find it, delete the test or fix its setup in its own commit that says why (what it covered, how it
+  failed, what was tried) and report it; if the coverage matters, name the scenario that should replace it. A test
+  that cannot be deleted right now (it guards something critical) is reported as failed, not passed.
 - A recipe command that no longer works (renamed script, new dep): fix the recipe in the same change.
 
 ## Report

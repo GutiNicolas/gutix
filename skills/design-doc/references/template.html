@@ -1,0 +1,158 @@
+<!-- For agents: read SLUG.llm.md instead of this file (same content as text, ~3x fewer tokens). Open this HTML only to change the doc, then run: node scripts/extract-llm.mjs docs/design/SLUG.html -->
+<!doctype html>
+<html lang="LANG">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TITLE</title>
+<style>
+  :root {
+    --ink: #1c2330;
+    --muted: #5b6676;
+    --line: #d9dee6;
+    --soft: #f4f6f9;
+    --accent: #1f5fbf;
+    --accent-soft: #e8f0fc;
+    --warn: #9a5b00;
+    --warn-soft: #fff4de;
+    --ok: #1d6b3a;
+    --ok-soft: #e6f4ea;
+    --bad: #c0392b;
+    --bad-soft: #fdecea;
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 15px; }
+  body {
+    margin: 0 auto;
+    max-width: 900px;
+    padding: 40px 32px 80px;
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 8px; }
+  h2 { font-size: 1.45rem; margin: 48px 0 12px; padding-top: 16px; border-top: 2px solid var(--ink); }
+  h3 { font-size: 1.12rem; margin: 28px 0 8px; }
+  h4 { font-size: 1rem; margin: 20px 0 6px; }
+  p { margin: 0 0 12px; }
+  ul, ol { margin: 0 0 12px; padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; background: var(--soft); padding: 1px 4px; border-radius: 3px; }
+  pre { background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; font-size: 0.8rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+  pre code { background: none; padding: 0; }
+  /* Fixed layout: the columns take the widths of the colgroup and never grow with a long cell. */
+  table { border-collapse: collapse; width: 100%; margin: 0 0 16px; font-size: 0.88rem; table-layout: fixed; }
+  th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; overflow-wrap: anywhere; hyphens: auto; }
+  td code, th code { white-space: normal; overflow-wrap: anywhere; }
+  th { background: var(--soft); font-weight: 600; }
+  td.num, th.num { text-align: right; }
+  td.c, th.c { text-align: center; }
+  .meta { color: var(--muted); font-size: 0.92rem; margin-bottom: 24px; }
+  .part { margin-top: 64px; padding: 14px 18px; background: var(--ink); color: #fff; border-radius: 6px; }
+  .part h2 { border: 0; margin: 0; padding: 0; color: #fff; }
+  .part p { margin: 4px 0 0; color: #cfd6e2; }
+  .box { border: 1px solid var(--line); border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 4px; padding: 10px 14px; margin: 0 0 16px; }
+  .box.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .box.ok { border-left-color: var(--ok); background: var(--ok-soft); }
+  .box > :last-child { margin-bottom: 0; }
+  .decision { border: 1px solid var(--line); border-left: 4px solid var(--ink); border-radius: 4px; padding: 10px 14px; margin: 0 0 14px; }
+  .decision h4 { margin: 0 0 6px; }
+  .decision p { margin: 0 0 6px; }
+  .decision > :last-child { margin-bottom: 0; }
+  .decision .lbl { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; margin-right: 4px; }
+  .pitfall { border: 1px solid #f0c9c4; border-left: 4px solid var(--bad); background: #fffafa; border-radius: 4px; padding: 10px 14px; margin: 0 0 12px; }
+  .pitfall h4 { margin: 0 0 6px; }
+  .pitfall p { margin: 0 0 6px; }
+  .pitfall > :last-child { margin-bottom: 0; }
+  .why { color: var(--muted); }
+  .why strong { color: var(--ink); }
+  figure.diagram { margin: 16px 0 24px; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+  figure.diagram svg { display: block; width: 100%; height: auto; }
+  figure.diagram figcaption { margin-top: 8px; color: var(--muted); font-size: 0.88rem; }
+  .toc { background: var(--soft); border-radius: 6px; padding: 14px 18px; }
+  .toc ol { margin: 0; }
+  .toc > ol > li { margin-top: 6px; }
+  .tag { display: inline-block; font-size: 0.72rem; padding: 0 7px; border-radius: 10px; background: var(--soft); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .tag.est { background: var(--warn-soft); border-color: #e6cf9c; color: var(--warn); }
+  .tag.new { background: var(--warn-soft); border-color: #e6cf9c; color: var(--warn); }
+  .tag.done { background: var(--ok-soft); border-color: #b5dcc0; color: var(--ok); }
+  .tag.plan { background: var(--accent-soft); border-color: #bcd0f0; color: var(--accent); }
+  @media print {
+    html { font-size: 10.5pt; }
+    body { max-width: none; padding: 0; }
+    h2, h3, h4 { break-after: avoid; }
+    table { font-size: 8.8pt; }
+    thead { display: table-header-group; }
+    tr, figure.diagram, .box, .decision, .pitfall { break-inside: avoid; }
+    pre { font-size: 7.8pt; break-inside: auto; }
+    figure.diagram svg { max-height: 235mm; }
+    .part { break-before: page; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .box, .tag, th, .decision, .pitfall, figure.diagram { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    a { color: inherit; text-decoration: none; }
+  }
+  @page { size: A4; margin: 16mm 14mm; }
+</style>
+</head>
+<body>
+
+<h1>TITLE</h1>
+<p class="meta">
+  REPO · design doc · YYYY-MM-DD · AUTHOR<br>
+  Sources: SOURCES (branch and commit, ADRs, plan files).
+</p>
+
+<div class="box">
+  <p><strong>Summary.</strong> What, why, how, what it costs, main risks: the reader who stops here knows the design.</p>
+</div>
+
+<div class="toc">
+  <ol>
+    <li><a href="#p1">PART TITLE</a>
+      <ol>
+        <li><a href="#p1-context">SECTION</a></li>
+      </ol>
+    </li>
+  </ol>
+</div>
+
+<div class="part" id="p1">
+  <h2>1. PART TITLE</h2>
+  <p>One line: what this part answers.</p>
+</div>
+
+<h3 id="p1-context">1.1 SECTION</h3>
+<p>The section opens with its main idea in one or two sentences, then the detail.</p>
+
+<!-- A decision: always Decision, Alternatives, Why. -->
+<div class="decision">
+  <h4>D1. DECISION TITLE</h4>
+  <p><span class="lbl">Decision</span>What was decided.</p>
+  <p><span class="lbl">Alternatives</span>What else was evaluated, with its cost.</p>
+  <p><span class="lbl">Why</span>Why this one, with the number or the constraint that settled it.</p>
+</div>
+
+<!-- A pitfall: a mistake an implementer will make, what happens, how the design avoids it. -->
+<div class="pitfall">
+  <h4>PITFALL TITLE</h4>
+  <p><strong>What happens:</strong> the failure, concretely.</p>
+  <p><strong>How it is avoided:</strong> the rule or the code that prevents it.</p>
+</div>
+
+<!-- A figure: inline SVG with a <title> that says what the diagram shows (the model twin keeps the title and the text labels only).
+     While drafting, the writer leaves an "svg D01" comment and the diagram author writes SLUG-figs/D01.svg; scripts/inline-figures.mjs pastes it in. -->
+<figure class="diagram" id="fig-1">
+  <!-- svg D01 -->
+  <figcaption>Figure 1. What the diagram shows, in one sentence.</figcaption>
+</figure>
+
+<table>
+  <thead><tr><th>Column</th><th class="num">Number</th></tr></thead>
+  <tbody>
+    <tr><td>Row</td><td class="num">1</td></tr>
+  </tbody>
+</table>
+
+<pre><code class="language-sql">-- code blocks carry their language</code></pre>
+
+</body>
+</html>

@@ -14,6 +14,7 @@ Claude Code plugin with Nicolas' engineering workflows.
 | `gutix:impact` | Blast radius with grep and git first: callers, contracts, data, config, sibling repos, and the tests to run. |
 | `gutix:live-data-change` | Changes data in a live PostgreSQL without blocking it: generated dry-run and apply files, index-only access proven by a plan test, batches with commits, lock and statement timeouts, `ON_ERROR_STOP` for pipelines, verification queries; and the delta + recomputed-projection design that keeps such changes cheap. |
 | `gutix:learn` | Turns mistakes that repeat into safeguards that run (test, lint rule, review invariant, recipe line), prunes stale instructions; persists only with evidence and the user's yes. |
+| `gutix:design-doc` | Writes a design doc from decisions already taken: an HTML for people (browser, PDF) with inline SVG diagrams and a generated `<name>.llm.md` twin that agents read at about a third of the tokens. Writer and diagram subagents, a contradictions review against the code, a checker (`check-doc.mjs`), and routing (first-line pointer, `AGENTS.md` line, `extract-llm.mjs --check`). |
 
 ## Install (local)
 
@@ -31,7 +32,7 @@ triage → bug-fix | feature-intake → PR → pr-review → sign-off → merge 
 A teammate's PR → peer-review → your confirmation → one review on GitHub.
 
 Supporting skills: `impact` before changing shared code or picking a review shape, `verify` before calling anything
-done, `learn` when a mistake repeats.
+done, `learn` when a mistake repeats, `design-doc` when a decided design needs writing up.
 
 Per-repo files the skills maintain: `.claude/verify.md` (how to build and test), `.claude/review.md` (invariants,
 accepted risks and human-read paths). Feature plans start from `skills/feature-intake/templates/` (roadmap, task,

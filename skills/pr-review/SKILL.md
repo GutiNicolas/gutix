@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: "Review a PR, branch or diff for real bugs (security always, plus correctness, data, contracts, tests): blast radius, one reviewer or a panel of up to 4, findings verified and ranked, approved ones fixed test-first. Skips commits already reviewed."
+description: "Review your PR, branch or diff for real bugs (security always, plus correctness, data, contracts, tests): one reviewer or a panel of up to 4, verified and ranked, fixed test-first; skips reviewed commits. A teammate's PR → gutix:peer-review."
 user-invocable: true
 args:
   - name: target

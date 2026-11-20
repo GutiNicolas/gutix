@@ -10,6 +10,7 @@ Claude Code plugin with Nicolas' engineering workflows.
 | `gutix:bug-fix` | Red test first, root cause, same pattern elsewhere, fix, production data check, close the gap. |
 | `gutix:sign-off` | Catches you up on a release or PR: expected vs built, the agents' decisions, the hunks to read, what the checks don't prove. Brief by default and records nothing; `mode=gate` adds a graded quiz when you ask for it. Never a merge condition. |
 | `gutix:pr-review` | Reviews a PR with one reviewer or a panel of up to 4 by risk area, verifies every finding (critical/high with a failing test), consolidates one ranked list, and fixes the approved ones test-first. Maps the blast radius itself, records the reviewed sha and skips what is already reviewed; reviewers write their reports to `.review/<sha>/` and hand back short summaries. |
+| `gutix:peer-review` | Reviews a teammate's PR in a throwaway worktree with hard cost limits: design, complexity, security, concurrency, contracts and repo rules, at most ~10 ranked comments in a kind, questioning tone, and a map of what to read yourself. Shows everything in the chat and posts one review only after your OK; re-reviews only the delta. |
 | `gutix:verify` | Runs the checks that prove a change works and reports each as passed, failed or not run. Keeps the repo's recipe in `.claude/verify.md` so no session rediscovers how to build and test. |
 | `gutix:live-data-change` | Changes data in a live PostgreSQL without blocking it: generated dry-run and apply files, index-only access proven by a plan test, batches with commits, lock and statement timeouts, `ON_ERROR_STOP` for pipelines, verification queries; and the delta + recomputed-projection design that keeps such changes cheap. |
 | `gutix:learn` | Turns mistakes that repeat into safeguards that run (test, lint rule, review invariant, recipe line), prunes stale instructions; persists only with evidence and the user's yes. |
@@ -30,6 +31,8 @@ After editing a skill: bump `version` in `.claude-plugin/plugin.json` and `marke
 triage → bug-fix | feature-intake → ship (dispatch → workers → integrate → release: pr-review + e2e → merge →
 clean up) (findings → bug-fix; new product rules → triage). `sign-off` whenever you want to catch up; `ship handoff`
 before a break or a fresh session.
+
+A teammate's PR → peer-review → your confirmation → one review.
 
 Supporting skills: `verify` before calling anything done, `learn` when a mistake repeats, `design-doc` when a decided
 design needs writing up.

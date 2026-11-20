@@ -1,6 +1,6 @@
 ---
 name: design-doc
-description: Write a technical design document from decisions already taken - an HTML for people (browser, PDF) with inline SVG diagrams, plus a generated .llm.md twin that agents read at about a third of the tokens. Writer and diagram subagents, a contradictions review against the code, a checker, and routing so agents read the twin. Use for a design doc, documento técnico, documento de diseño, or a detailed doc of what will be built.
+description: "Write a technical design doc from decisions already taken: an HTML for people with inline SVG diagrams, plus a generated .llm.md twin agents read cheaply, checked against the code. Use for a design doc, documento técnico or documento de diseño."
 user-invocable: true
 args:
   - name: topic

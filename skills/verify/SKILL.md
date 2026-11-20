@@ -4,7 +4,7 @@ description: Prove a change works by running checks, never by claiming it. Keeps
 user-invocable: true
 args:
   - name: scope
-    description: "What to verify: a diff, branch, path or test scope from gutix:impact (default: the current diff). \"setup\" (re)writes the recipe."
+    description: "What to verify: a diff, branch, path or test scope from a blast radius (default: the current diff). \"setup\" (re)writes the recipe."
     required: false
 ---
 
@@ -25,7 +25,7 @@ Read `.claude/verify.md` in the repo. If it is missing, or `scope` is `setup`, w
 ## 2. Pick the checks
 Cheapest that proves the change, deterministic first:
 1. Compile / type-check and the linters CI runs.
-2. The tests for what changed: the scope from `gutix:impact` if it ran, otherwise the tests next to the changed files
+2. The tests for what changed: the scope from a blast radius (pr-review, feature-intake) if one ran, otherwise the tests next to the changed files
    and the ones that name the changed symbols (`rg`).
 3. Integration or e2e only when the change crosses a boundary (endpoint, query, migration, contract, user flow).
 4. Full suite: when the repo's CI runs it on the PR, push and read `gh pr checks` (in the background) instead of

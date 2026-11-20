@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: "Review a PR, branch or diff for real bugs (security always, plus correctness, data, concurrency, contracts, performance, tests): one reviewer or a panel by risk, every finding verified and ranked, approved ones fixed test-first. For your own or your team's code; a teammate's PR goes to gutix:peer-review."
+description: "Review a PR, branch or diff for real bugs (security always, plus correctness, data, contracts, tests): blast radius, one reviewer or a panel of up to 4, findings verified and ranked, approved ones fixed test-first. Skips commits already reviewed."
 user-invocable: true
 args:
   - name: target
@@ -16,7 +16,20 @@ args:
 Goal: find the bugs that would hurt production (security holes, data loss, outages, wrong results) before merge, with
 few false positives. Style, naming and formatting are out of scope: linters own them.
 
-## 1. Read the context
+## 1. Already reviewed? Then read the context
+- **Look for a review record first**, before reading any diff. The head: `gh pr view <pr> --json headRefOid,body`
+  (or `git rev-parse HEAD`). A record is a `Reviewed: <sha> (<date>, <n> findings)` line in the PR body, the
+  roadmap release line's `last reviewed: <sha>`, or the same `Reviewed:` line in a task file's Result.
+  - **Head = reviewed sha**, or `git diff --name-only <sha>..HEAD` lists only plan files (roadmap, task files: writing
+    the record moves the head): don't review. Say it is already reviewed (`<sha>`, date, findings, report path if
+    `.review/<sha>/` exists) and stop.
+  - **Head moved** and `git merge-base --is-ancestor <sha> HEAD`: review only `<sha>..HEAD`, with the previous
+    findings and their outcome in the prompts. Not an ancestor (rebase, force-push): a full review, and say why.
+  - **Release PR:** a `T-<nn>: …` commit whose task file records a review of its task PR is covered when that sha is
+    the task PR's merged head (`gh pr view <n> --json headRefOid`); otherwise review only what came after it. Still
+    review conflict resolutions, `fix(…)` commits and tasks with no record.
+  - Report files for this head in `.review/<head>/` and no consolidated result: consolidate those (step 5), don't
+    relaunch reviewers.
 - The diff: `git diff <base>...HEAD --stat`, then by path. The PR description and the ticket or design doc it implements.
 - The repo's rules: `CLAUDE.md`, `.claude/review.md` if present (invariants, accepted risks and Human-read paths, see
   [repo-rules-template.md](repo-rules-template.md)), and the standard skills it names (backend, observability,
@@ -30,10 +43,18 @@ few false positives. Style, naming and formatting are out of scope: linters own 
   when it looks harmless.
 - **The reviewed commit:** note the head sha you review. If the branch moves during the review, the result is for
   that sha only; say so in the report and review the new commits before calling it clean.
-- **Checks and blast radius, once:** read `gh pr checks` for the head sha and don't re-run what CI ran on it (full
-  suite, e2e); run `gutix:verify` only for a check CI lacks. Then `gutix:impact`. Their
-  failures and the affected callers/contracts go into every reviewer prompt, so no reviewer rediscovers them; an auth,
-  tenancy, data or contract change in the blast radius counts for the shape in step 2.
+- **Checks, once:** read `gh pr checks` for the head sha and don't re-run what CI ran on it (full suite, e2e); run
+  `gutix:verify` only for a check CI lacks.
+- **Blast radius, with grep and git, no subagents:**
+  - What changed shape: `git diff -U0 <base>...HEAD | rg '^[+-].*(class|interface|def|fun|function|export|public|@\w+Mapping|CREATE|ALTER)'`
+    → the symbols, endpoints, columns, events and config keys whose contract changed. A body-only change stops here.
+  - Callers: `rg -l '\b<Symbol>\b'` in the repo and, for shared contracts, in the product's sibling repos
+    (back + front + e2e). Read a function only where the matching line can't decide.
+  - Contracts (`docs/API.md`, OpenAPI, event schemas, front API clients, e2e scenarios), data (migrations, readers
+    and writers of touched columns), config (new or renamed env vars, flags, secrets → the infra repo changes too).
+  - Tests to run: the ones naming the changed symbols; any CI doesn't run go to `gutix:verify`.
+  Failing checks and affected callers/contracts go into every reviewer prompt, so no reviewer rediscovers them; an
+  auth, tenancy, data or contract change in the blast radius counts for the shape in step 2.
 - **Cross-repo changes:** if the same branch exists in other repos of the product (e.g. back + front + e2e), the
   contract between them is part of the review.
 
@@ -48,8 +69,10 @@ panel finds more for its cost is not measured yet.
 | PR | Shape |
 | --- | --- |
 | Default, up to ~5,000 changed lines | One reviewer with the sections that fired |
-| Touches auth/sessions, authorization/tenancy, payments or migrations | A panel: one reviewer per fired risk area (2-4, up to ~5,000 lines each) + one "intent and tests" reviewer |
-| Over ~5,000 changed lines without those | Split by area as for a panel, without the extra "intent and tests" reviewer (the area reviewers keep the Intent section) |
+| Touches auth/sessions, authorization/tenancy, payments or migrations | A panel: one reviewer per fired risk area (up to 3) + one "intent and tests" reviewer |
+| Over ~5,000 changed lines without those | Split by area, up to 4, without the extra "intent and tests" reviewer (the area reviewers keep the Intent section) |
+
+**Never more than 4 reviewers per round.** More areas than that: merge the closest ones.
 
 - Areas group by domain (sessions/auth, authorization/tenancy, external surface, data/migrations, front), never by folder
   alone. Migrations go with the area that uses them.
@@ -61,7 +84,8 @@ panel finds more for its cost is not measured yet.
 
 ## 3. The reviewer prompt
 Fixed part (copy it):
-- READ-ONLY: do not edit, commit or push. Diff: `git -C <worktree> diff <base>...HEAD -- <paths>`.
+- READ-ONLY: do not edit, commit or push; the one file you write is your report. Diff:
+  `git -C <worktree> diff <base>...HEAD -- <paths>` (or `<reviewed sha>..HEAD` on a re-review).
 - One line on what the service is and why this PR matters.
 - The repo invariants and accepted risks from `.claude/review.md` as step 1 resolved them (base floor + rules the PR
   adds; accepted risks are not findings).
@@ -69,9 +93,13 @@ Fixed part (copy it):
 - Verify every finding by reading the code path end to end; a focused test run is allowed. Discard what you cannot
   substantiate. No style nits.
 - Mark findings the PR did not introduce as **pre-existing** (still report them if the PR makes them matter).
-- Report (max ~700 words): findings most severe first, each with severity and certainty (rubric below), file:line,
-  what is wrong, a concrete failure scenario (inputs -> wrong outcome), the fix. Then "checked and fine" and the list
-  of files you did not get to.
+- Write the full report (max ~700 words) to `<worktree>/.review/<head sha>/<area>.md`: findings most severe first,
+  each with severity and certainty (rubric below), file:line, what is wrong, a concrete failure scenario
+  (inputs -> wrong outcome), the fix. Then "checked and fine" and the list of files you did not get to.
+- Reply with **≤150 words only**: counts by severity, a one-line title + file:line per critical/high, and the path.
+
+Before launching, keep the reports out of git: add `.review/` to `$(git rev-parse --git-path info/exclude)` if
+it is not there.
 
 Variable part: the area's files, its design docs, and the catalog sections that fired for it (step 2).
 The "intent and tests" reviewer gets the PR description/ticket (or the task's acceptance criteria) and checks: does
@@ -91,6 +119,7 @@ Certainty: **confirmed** (traced end to end or proven by a test) or **plausible*
 in the code, e.g. infrastructure).
 
 ## 5. Verify and consolidate (the orchestrator, yourself)
+- Open the report files only for the findings you must check; never paste whole reports into this context.
 - Re-read in the code every medium-or-worse finding. Discard, re-rate, merge duplicates across areas.
 - **Critical and high: prove them with a failing test** (scratch, not committed) before reporting. A red test ends
   the discussion; if you cannot make it fail, re-rate it.
@@ -103,12 +132,15 @@ in the code, e.g. infrastructure).
   sign-off's default list) and the changes to the checks themselves (step 1), `file:line` and why, even with no
   findings; 8. **what the checks prove and don't**, and the sha reviewed.
   Each finding: the real risk, who could exploit it or when it breaks, and the proposed fix.
+- **Record the review** so no later run repeats it: `Reviewed: <head sha> (<date>, <n> findings)`. In the PR body
+  only with the user's yes (`gh pr edit`: it publishes content); otherwise in the roadmap release line
+  (`last reviewed: …`) for a release PR, or in the task file's Result for a task PR, committed alone
+  (`review: <sha>`). Neither exists: say in the report that the next run can't skip it.
 - End with one question: which ones to fix. Fix nothing before the user answers.
 - A finding the user turns into a product rule ("this must never happen") goes through `gutix:triage` step 4, so it
   is recorded and enforced in future reviews.
-- Never post on the PR without asking: a PR comment publishes content. Someone else's PR: use `gutix:peer-review`.
-- A release PR goes to `gutix:sign-off` before merge; another PR that touches human-read paths gets it offered, not
-  required.
+- Never post on the PR without asking: a PR comment publishes content.
+- For a release PR, or one that touches human-read paths, offer `gutix:sign-off` (brief); it is not a merge condition.
 
 ## 6. Fix (mode=fix, only what the user approved)
 The fixes never run in the review's context: that context already holds the whole diff and every report, and a fix

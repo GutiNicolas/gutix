@@ -21,9 +21,9 @@
 <!-- API/event shapes and rules shared by more than one task. Link to API.md / design docs when they exist. -->
 
 ## Phases and tasks
-<!-- Status: todo | in progress | integrated | changes asked | merged | blocked. One line per task, updated by the
-     dispatch (in progress), the integrate session (integrated: squashed into release/<slug>-p<n>; blocked when the
-     task's Result says so) and the release (merged: the reviewed release PR reached main). Workers never edit this
+<!-- Status: todo | in progress | integrated | changes asked | merged | blocked. One line per task, updated by
+     gutix:ship: dispatch (in progress), integrate (integrated: squashed into release/<slug>-p<n>; blocked when the
+     task's Result says so) and release (merged: the reviewed release PR reached main). Workers never edit this
      file: parallel task PRs conflict on it, and an open PR is the task's status. Task PRs target the phase's release
      branch, never main. -->
 ### Phase 1: <name> (shippable on its own)
@@ -35,5 +35,9 @@ Release PR: — · last reviewed: — · last signed off: — · open: —
 ## Open questions
 - <question> — <who decides>
 
+## Handoff
+<!-- Written by gutix:ship handoff, replaced each time. Date; Published (what reached main); In flight (open PRs,
+     running sessions, blocked tasks and why); Next steps: for each, the project and the exact prompt to paste. -->
+
 ## Log
-<!-- One line per session that changed the plan: date, what changed. Sign-offs and overrides are logged here too. -->
+<!-- One line per session that changed the plan: date, what changed. Sign-offs (gate mode) are logged here too. -->

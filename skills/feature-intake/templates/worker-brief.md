@@ -7,7 +7,9 @@ Implement `docs/features/<slug>/tasks/T-<nn>.md` in <repo>, starting from <base 
   reinterpreted because two clashed is a decision: list it. "Where to look" names what a human must read, not
   everything you changed.
 - Open the PR against <base branch> (the phase's `release/` branch, never main) with the criteria results in the
-  description. No review session follows per task: the release PR is reviewed once. Keep tool output small (CLAUDE.md "Context budget").
+  description. No review session follows per task: the release PR is reviewed once. If you do review your PR
+  (gutix:pr-review), record it in the task's Result as `Reviewed: <sha> (<date>, <n> findings)`, so the release
+  review skips it. Keep tool output small (CLAUDE.md "Context budget").
 - If the spec is wrong or blocked, stop: write the problem under "Result" (in a draft PR if there is code), and end.
   Don't improvise a different design.
 - A command running in the background (render, gate, e2e) is part of this turn: wait for its completion notice;

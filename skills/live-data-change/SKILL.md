@@ -1,6 +1,6 @@
 ---
 name: live-data-change
-description: Change data in a live 24/7 PostgreSQL without blocking it (renames, merges, backfills, deletes on big tables, run by a pipeline with psql), and the counter/projection design that makes those changes cheap. Use when writing or reviewing a data migration, backfill or one-off production SQL, or when designing counters, aggregates or projections.
+description: "Change data in a live PostgreSQL without blocking it (backfills, renames, merges, big deletes, psql pipelines), and the counter/projection design that keeps it cheap. Use for data migrations, backfills, one-off production SQL, counters or projections."
 user-invocable: true
 args:
   - name: change

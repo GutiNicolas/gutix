@@ -1,6 +1,6 @@
 ---
 name: feature-intake
-description: "Turn a requirement or feature request into a buildable plan across repos: challenge it, map the impact, split into phases with contracts, written as a roadmap and task files that fresh worker sessions build. Use for a requirement, a plan to challenge or a feature to implement."
+description: "Turn a requirement into a buildable plan across repos: challenge it, map the blast radius, split into phases with contracts, written as a roadmap and task files. Planning only; gutix:ship builds it. Use for a requirement, a plan to challenge or a feature."
 user-invocable: true
 args:
   - name: requirement
@@ -12,6 +12,9 @@ args:
 
 Spend in proportion. A small, clear feature in one repo: a five-line plan in the chat, build it, done. The full path
 below is for work that crosses repos, touches security or data, or takes more than a day.
+
+This session plans and nothing else. A question or ops work outside the plan (a deploy, a failing CI, a bug in
+another repo, a "while you're here") goes to a new session, never into this one: offer it, and keep planning here.
 
 ## 1. Understand and challenge
 - Restate the goal in one or two sentences, in product terms: who gets what.
@@ -26,7 +29,14 @@ below is for work that crosses repos, touches security or data, or takes more th
   their take, then recommend. Offer to go deeper until they can argue it unaided.
 
 ## 2. Map the impact (only what applies)
-Start from `gutix:impact` for the code that already exists; then decide the rest:
+Start from the code that already exists, with grep and git, no subagents (read a function only where the matching
+line can't decide):
+- **Blast radius:** the symbols, endpoints, columns, events and config keys the feature changes; their callers
+  (`rg -l '\b<Symbol>\b'` in the repo and the product's sibling repos: back + front + e2e); the contracts that
+  describe them (`docs/API.md`, OpenAPI, event schemas, front API clients, e2e scenarios); the config (env vars,
+  flags, secrets); and the tests that cover them today, which become acceptance criteria.
+
+Then decide the rest:
 - **Repos and contracts:** which repos change, and the API or event shapes between them.
 - **Security:** read the change through gutix:pr-review's `catalog.md` — new surface, who may call it, tenancy,
   platform-level access, secrets. Decide the rules now, not in review.
@@ -51,39 +61,16 @@ fresh session that starts from the files alone. Use the [templates](templates/) 
 - Tasks that can run in the same wave and add a migration get their `V<n>` assigned in the task file: workers cut
   from the same main all pick the same "next free" number.
 - Iterate on the files: when the user edits or comments, read the change and answer it; don't restate the plan.
+- Task files name the phase's release branch, `release/<slug>-p<n>`, as their base branch (see `gutix:ship`).
 - When the user approves, record it in the roadmap's Log, get the plan files onto main (a docs-only PR the user
   merges) and **end this session**. New sessions start from the base branch, so a plan that lives only on a side
   branch is invisible to them. Don't build from here.
 
-## 4. Build (fresh sessions, not this one)
-Each phase builds on one **release branch**, `release/<slug>-p<n>`, cut from main by the first dispatch of the
-phase. Task files name it as their base branch; task PRs target it, never main. One review per release, not per task.
-- **Dispatch** (a fresh, short session on Haiku): read the roadmap, start one worker session per ready task (own
-  worktree, Sonnet, from the release branch) with `worker-brief.md`, which points to the task file, after setting
-  their rows to "in progress" in one commit on the release branch. Then end; don't wait for or follow the workers.
-  Gates: start no task of phase n+1 while release p<n> lacks `gutix:sign-off`, and nothing new while 2 release lines
-  in `~/projects/*/docs/features/*/ROADMAP.md` have a release PR and no sign-off for its head.
-- **Workers**: implement one task, run its acceptance criteria, fill its "Result", open the PR against the release
-  branch, end. They never edit the roadmap: parallel task PRs all conflict on it. A wrong or blocked spec is written
-  in the task's "Result", never improvised around.
-- **Integrate** (a fresh, short session on Haiku, or the next dispatch): squash-merge every task PR whose `verify` is
-  green into the release branch, one commit per task (`T-<nn>: <title>`), resolving the shared conflicts once (migration
-  numbers), then open or update the release PR: its CI is the one combined check (green task PRs don't cover what
-  they break together), never a local run as well; the workers' checks are not rerun. A conflict beyond migration
-  numbers, or red release CI: hand
-  off to Sonnet. Set the rows to "integrated" ("blocked" when a "Result" says so). Later waves start from here.
-- **Review** (a fresh session, on the release PR to main): `gutix:pr-review` of the release diff, walked task commit
-  by task commit against each task file; a panel by risk when the diff is large. On the main model when it holds
-  contracts, security or tricky state. Fixes are commits on the release branch (`fix(T-<nn>): …`). If a wave must be
-  reviewed before the next one builds on it, review only the diff since the last reviewed commit.
-- **Release**: when the review is clean and CI (with the `e2e` label) is green, run `gutix:sign-off` on the release PR.
-  Merge only when `git diff --name-only <signed-off sha>..HEAD` lists nothing but the roadmap, or the Log records the
-  user's explicit override; anything else since needs `gutix:sign-off since=<signed-off sha>` again. Merge with a
-  merge commit (keeps the per-task commits) and set the rows to "merged".
-- **Status and next phase**: a fresh session on Haiku reads the status table. Changes to the plan go into the roadmap
-  and the task files, with a line in the Log.
-- Small or tightly coupled work (the five-line-plan case above) stays in one session and skips the files.
+## 4. Build: `gutix:ship`, in fresh sessions
+Everything after the plan runs through `gutix:ship`, one fresh short session per step: `dispatch` (workers, one per
+ready task), `integrate` (task PRs into the release branch), `release` (review, e2e, merge, clean-up), `handoff` and
+`status`. Small or tightly coupled work (the five-line-plan case above) stays in one session and skips the files.
 
 ## Report
 The files written (roadmap and tasks, with paths), the phases, decisions taken, what the user must do (secrets,
-dashboards, approvals), and the next step: the dispatch session to start, or `gutix:sign-off` for a waiting release.
+dashboards, approvals), and the next step: the `gutix:ship dispatch` session to start once the plan is on main.

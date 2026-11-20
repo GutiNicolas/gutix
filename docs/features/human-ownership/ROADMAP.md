@@ -135,3 +135,4 @@ Branch `feat/human-ownership-p2` → PR to master. Release PR: — · last revie
 - 2026-11-03: plan approved via GutiNicolas/gutix#1; phase 1 built in one session on `feat/human-ownership-p1` (D6).
 - 2026-11-03: trial 1 caught that sign-off wrote in English for a Spanish-speaking user; fix(T-02): page, quiz and grading in the user's language.
 - 2026-11-03: trial 1 (a past security release of a private project): sections 1–5 useful, quiz 0/4, not recorded at Nicolas' request; two misses became bug-fix sessions in that project. Lessons for phase 2 in T-05's Result.
+- 2026-11-20: 0.9.0 supersedes D10, D11 and the "Gates in feature-intake" contract: sign-off is brief by default and the quiz (`gate`) runs only on request; no phase or WIP gate, and merging needs no signed-off sha. Building moved from feature-intake §4 to `gutix:ship`. The peer review and impact skills were removed (impact folded into pr-review and feature-intake). T-07/T-08 must not re-add the gates.

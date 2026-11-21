@@ -126,12 +126,18 @@ Use them for folders no agent should read (archives, closed tickets), never for 
 
 ## 7. Publish (optional)
 
-- **PDF:** open the HTML in a browser and print; the template's print CSS paginates parts and keeps figures and
-  tables whole.
-- **Google Doc:** copy the twin without its first line (`tail -n +3 <slug>.llm.md | pbcopy`), then in the doc:
-  Tools → Preferences → "Enable Markdown", Edit → "Paste from Markdown". Diagrams go in by hand as images exported
-  from the browser. Doc tools that take the content as an argument make the model re-type it: above ~30 KB, paste
-  instead.
+- **PDF:** `node <skill>/scripts/render.mjs docs/design/<slug>.html --pdf` prints the page as it is (the template's
+  print CSS paginates parts and keeps figures and tables whole), or print it from a browser.
+- **Export figures:** `bash <skill>/scripts/setup.sh` once (Playwright goes to `~/.cache/gutix`; it drives the system
+  Chrome or Chromium, `CHROME_PATH` overrides), then `node <skill>/scripts/render.mjs docs/design/<slug>.html --png`
+  writes one themed PNG per figure, 2x (`--scale 1`..`4`), as `<slug>-<figure id>.png`. A single `.svg` works too.
+  The render refuses a figure below 400x120 or more than 4:1 stretched: fix the viewBox, not the lint.
+- **Google Doc:** one rule: paste the twin, then insert the PNGs. Put the twin without its first line on the
+  clipboard (`tail -n +3 <slug>.llm.md`, piped to the first of `pbcopy`, `wl-copy`, `xclip -selection clipboard` that
+  exists; with none of them, tell the user the twin's path and have them copy the file), then in the doc: Tools →
+  Preferences → "Enable Markdown", Edit → "Paste from Markdown". Insert each exported PNG where its figure goes
+  (Insert → Image → Upload from computer). Doc tools that take the content as an argument make the model re-type it:
+  above ~30 KB, paste instead.
 - Never upload internal diagrams to a public host to insert them as images.
 
 ## 8. Report

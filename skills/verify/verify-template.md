@@ -10,6 +10,7 @@ Last checked: YYYY-MM-DD
 | --- | --- | --- | --- |
 | Build / compile | | | |
 | Lint / format | | | same as CI |
+| Lint / types, baseline | | | repos with old errors only: run on HEAD and on the tree, then `new-diagnostics.mjs` (see the skill) |
 | Unit, all | | | |
 | Unit, one test | | | e.g. `-Dtest=Class#method`, `vitest run path -t name` |
 | Integration | | | local deps it needs |

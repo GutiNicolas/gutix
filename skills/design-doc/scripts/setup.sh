@@ -7,15 +7,18 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPS="${GUTIX_DEPS:-$HOME/.cache/gutix}"
-PACKAGES=(playwright-core)
+# Exact versions: what runs on a machine is what was tested. A cached copy at another version is reinstalled.
+PACKAGES=(playwright-core@1.65.1)
 
 mkdir -p "$DEPS"
 cd "$DEPS"
 [ -f package.json ] || npm init -y >/dev/null
 
 missing=()
-for package in "${PACKAGES[@]}"; do
-	[ -f "node_modules/$package/package.json" ] || missing+=("$package")
+for spec in "${PACKAGES[@]}"; do
+	name="${spec%@*}"
+	have="$(node -e 'try{process.stdout.write(require(process.argv[1]).version)}catch{}' "$DEPS/node_modules/$name/package.json" 2>/dev/null || true)"
+	[ "$have" = "${spec##*@}" ] || missing+=("$spec")
 done
 
 if [ ${#missing[@]} -gt 0 ]; then

@@ -163,3 +163,26 @@ test('a doc cannot run scripts or reach the network while it is rendered', { ski
     assert.deepEqual(hits, []);
   } finally { server.close(); }
 });
+
+test('setup reinstalls playwright-core when the cached version is not the pinned one, and skips it when it is', () => {
+  const root = tmp();
+  const deps = path.join(root, 'deps');
+  const bin = path.join(root, 'bin');
+  const log = path.join(root, 'npm.log');
+  fs.mkdirSync(path.join(deps, 'node_modules', 'playwright-core'), { recursive: true });
+  fs.writeFileSync(path.join(deps, 'package.json'), '{}');
+  const pkg = path.join(deps, 'node_modules', 'playwright-core', 'package.json');
+  fs.mkdirSync(bin);
+  fs.writeFileSync(path.join(bin, 'npm'), `#!/bin/sh\necho "$@" >> "${log}"\n`, { mode: 0o755 });
+  const env = { ...process.env, GUTIX_DEPS: deps, CHROME_PATH: stub(root, 'chrome'), PATH: `${bin}:${process.env.PATH}` };
+  const setup = path.join(here, '..', 'setup.sh');
+
+  fs.writeFileSync(pkg, '{"version":"0.0.1"}');
+  assert.equal(spawnSync('bash', [setup], { env, encoding: 'utf8' }).status, 0);
+  assert.match(fs.readFileSync(log, 'utf8'), /install .*playwright-core@\d+\.\d+\.\d+\s/);
+
+  fs.rmSync(log);
+  fs.writeFileSync(pkg, JSON.stringify({ version: /playwright-core@(\d+\.\d+\.\d+)/.exec(fs.readFileSync(setup, 'utf8'))[1] }));
+  assert.equal(spawnSync('bash', [setup], { env, encoding: 'utf8' }).status, 0);
+  assert.equal(fs.existsSync(log), false, 'the pinned version is already there: no install');
+});

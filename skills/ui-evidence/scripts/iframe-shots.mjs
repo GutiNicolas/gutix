@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { DEFAULT_CTA_SOURCE, buildCtaRegex, fail, loadBrowser, missingArgs, parseArgs, parseLabels, verdict } from './lib.mjs';
+import { DEFAULT_CTA_SOURCE, buildCtaRegex, collectRows, exitCodeFor, fail, loadBrowser, missingArgs, parseArgs, parseLabels, verdict } from './lib.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 const missing = missingArgs(args, ['url', 'label']);
@@ -50,38 +50,45 @@ const { chromium, devices, launch } = loadBrowser();
 fs.mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch(launch);
 const results = [];
-try {
-  for (const host of HOSTS) {
-    for (const deviceName of DEVICES) {
-      const context = await browser.newContext(devices[deviceName]);
-      const page = await context.newPage();
-      await page.setContent(host.html(args.url), { waitUntil: 'load', timeout: 60000 });
-      await page.waitForTimeout(4000);
-      const iframeBox = await page.locator('iframe').boundingBox();
-      const frame = page.frames().find((f) => f.url().includes(FRAME_MATCH));
-      if (!frame || !iframeBox) { results.push({ host: host.name, device: deviceName, error: 'iframe not found' }); await context.close(); continue; }
-      const inner = await frame.evaluate((ctaSource) => {
-        const cta = new RegExp(ctaSource, 'i');
-        const button = [...document.querySelectorAll('button')].filter((b) => cta.test(b.textContent.trim())).pop();
-        const rect = button?.getBoundingClientRect();
-        return { frameInnerHeight: innerHeight, frameScrollHeight: document.documentElement.scrollHeight, buttonBottomInFrame: rect ? Math.round(rect.bottom) : null };
-      }, CTA_SOURCE);
-      const viewportHeight = page.viewportSize().height;
-      const buttonBottomOnScreen = inner.buttonBottomInFrame === null ? null : Math.round(iframeBox.y + inner.buttonBottomInFrame);
-      const file = path.join(OUT, `${args.label}-${host.name}-${deviceName.toLowerCase().replace(/\s+/g, '-')}.png`);
-      await page.screenshot({ path: file });
-      results.push({
-        host: host.name, device: deviceName, viewportHeight, iframeTop: Math.round(iframeBox.y), iframeHeight: Math.round(iframeBox.height),
-        ...inner, buttonBottomOnScreen,
-        isButtonVisibleWithoutScroll: buttonBottomOnScreen === null ? null : buttonBottomOnScreen <= viewportHeight, file
-      });
-      await context.close();
-    }
-  }
-} finally { await browser.close(); }
+const units = HOSTS.flatMap((host) => DEVICES.map((deviceName) => ({ host, deviceName })));
 
-fs.writeFileSync(path.join(OUT, `${args.label}-results.json`), JSON.stringify(results, null, 2));
+async function shootOne({ host, deviceName }) {
+  const context = await browser.newContext(devices[deviceName]);
+  try {
+    const page = await context.newPage();
+    await page.setContent(host.html(args.url), { waitUntil: 'load', timeout: 60000 });
+    await page.waitForTimeout(4000);
+    const iframeBox = await page.locator('iframe').first().boundingBox();
+    const frame = page.frames().find((f) => f.url().includes(FRAME_MATCH));
+    if (!frame || !iframeBox) { results.push({ host: host.name, device: deviceName, error: 'iframe not found' }); return; }
+    const inner = await frame.evaluate((ctaSource) => {
+      const cta = new RegExp(ctaSource, 'i');
+      const button = [...document.querySelectorAll('button')].filter((b) => cta.test(b.textContent.trim())).pop();
+      const rect = button?.getBoundingClientRect();
+      return { frameInnerHeight: innerHeight, frameScrollHeight: document.documentElement.scrollHeight, buttonBottomInFrame: rect ? Math.round(rect.bottom) : null };
+    }, CTA_SOURCE);
+    const viewportHeight = page.viewportSize().height;
+    const buttonBottomOnScreen = inner.buttonBottomInFrame === null ? null : Math.round(iframeBox.y + inner.buttonBottomInFrame);
+    const file = path.join(OUT, `${args.label}-${host.name}-${deviceName.toLowerCase().replace(/\s+/g, '-')}.png`);
+    await page.screenshot({ path: file });
+    results.push({
+      host: host.name, device: deviceName, viewportHeight, iframeTop: Math.round(iframeBox.y), iframeHeight: Math.round(iframeBox.height),
+      ...inner, buttonBottomOnScreen,
+      isButtonVisibleWithoutScroll: buttonBottomOnScreen === null ? null : buttonBottomOnScreen <= viewportHeight, file
+    });
+  } finally { await context.close(); }
+}
+
+try {
+  await collectRows(units, ({ host, deviceName }) => ({ host: host.name, device: deviceName }), shootOne, results);
+} finally {
+  await browser.close();
+  fs.writeFileSync(path.join(OUT, `${args.label}-results.json`), JSON.stringify(results, null, 2));
+}
+
 for (const r of results) {
   if (r.error) { console.log(`${r.host.padEnd(10)} ${r.device.padEnd(10)} ERROR ${r.error}`); continue; }
   console.log(`${args.label.padEnd(14)} ${r.host.padEnd(10)} ${r.device.padEnd(10)} iframe=${r.iframeTop}+${r.iframeHeight} btnBottom=${r.buttonBottomOnScreen}/${r.viewportHeight} ${verdict(r.isButtonVisibleWithoutScroll, LABELS)}`);
 }
+if (exitCodeFor(results)) console.error('some hosts failed (rows marked ERROR); exiting 1');
+process.exitCode = exitCodeFor(results);

@@ -212,3 +212,41 @@ describe('mock-preload.mjs', () => {
     assert.deepEqual(JSON.parse(result.stdout.trim().split('\n').pop()), { status: 200, id: 'demo-1', created: 201, passedThrough: true });
   });
 });
+
+describe('screens that fail do not lose the run (#4)', () => {
+  it('collectRows pushes an error row for a unit that throws and goes on with the next', async () => {
+    const rows = [];
+    await lib.collectRows(['a', 'b', 'c'], (unit) => ({ screenId: unit }), async (unit) => {
+      if (unit === 'b') throw new Error('Execution context was destroyed');
+      rows.push({ screenId: unit, ok: true });
+    }, rows);
+    assert.deepEqual(rows.map((r) => [r.screenId, r.ok ?? false, Boolean(r.error)]), [['a', true, false], ['b', false, true], ['c', true, false]]);
+    assert.match(rows[1].error, /Execution context/);
+  });
+  it('exitCodeFor is 1 when any row has an error, 0 otherwise', () => {
+    assert.equal(lib.exitCodeFor([{ ok: 1 }, { error: 'x' }]), 1);
+    assert.equal(lib.exitCodeFor([{ ok: 1 }]), 0);
+  });
+});
+
+describe('--steps for the base screen and nested ids (#6)', () => {
+  it('stepsFor finds "-" for the base screen', () => {
+    assert.equal(lib.stepsFor(lib.parseSteps('-=2'), ''), 2);
+    assert.equal(lib.stepsFor(lib.parseSteps('a=3'), 'a'), 3);
+    assert.equal(lib.stepsFor({}, 'a'), undefined);
+  });
+  it('screenUrl keeps "/" in a nested id', () => {
+    assert.equal(lib.screenUrl('http://h/app', 'a/b c'), 'http://h/app/a/b%20c');
+  });
+  it('fileId makes a nested id file-safe', () => {
+    assert.equal(lib.fileId('a/b'), 'a_b');
+    assert.equal(lib.fileId(''), 'base');
+  });
+});
+
+describe('mockBody (#7)', () => {
+  it('sends no body for null-body statuses so new Response does not throw', () => {
+    for (const status of [204, 205, 304]) assert.doesNotThrow(() => new Response(lib.mockBody({ status, body: {} }), { status }));
+    assert.equal(lib.mockBody({ status: 200, body: { a: 1 } }), '{"a":1}');
+  });
+});

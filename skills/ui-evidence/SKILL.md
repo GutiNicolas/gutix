@@ -16,7 +16,7 @@ unchanged") and a **screenshot**.
 
 Requires:
 - Node, a system Chrome (`$CHROME_PATH`, the macOS app, or `google-chrome` / `chromium` on `PATH`) and the Playwright
-  deps in `$GUTIX_DEPS` (default `~/.cache/gutix`). Missing deps → `bash skills/design-doc/scripts/setup.sh` once.
+  deps in `$GUTIX_DEPS` (default `~/.cache/gutix`). Missing deps → `bash <skill>/../design-doc/scripts/setup.sh` once (`<skill>` is this skill's folder; design-doc is its sibling).
   No Chrome → say so and ask for screenshots taken by hand.
 - The app running locally (or a staging URL) with a way to reach each screen by URL.
 - Optional: the ticket text and the design spacing, if the criteria come from them. Missing → take the criteria from
@@ -43,16 +43,18 @@ Run `scripts/tour.mjs` from anywhere; it needs no packages beside the deps above
 ```bash
 node <skill>/scripts/tour.mjs --phase before --base http://127.0.0.1:8080/app \
   --screens home,signup,checkout --steps signup=3 --out "${TMPDIR:-/tmp}/evidence/shots" \
-  [--devices iphone-se,desktop] [--cta "^(continue|next)$"] [--query lang=en] [--init-script stub.js]
+  [--devices iphone-se,desktop] [--cta "^(continue|next)$"] [--query lang=en] [--init-script stub.js] [--camera]
 ```
 
-- Screens are `<base>/<id>?<query>` (`-` is the base itself). `--steps id=N` clicks the CTA and measures the next
+- Screens are `<base>/<id>?<query>` (`-` is the base itself, also in `--steps -=2`; an id may contain `/`). `--steps id=N` clicks the CTA and measures the next
   screens too; without it only the first one is measured.
 - It writes `<out>/<phase>/results.json` and one PNG per screen × device × step, and records the CTA top and bottom,
   whether it is visible, the page overflow, and every inner scroller with its overflow.
 - Default devices: `iphone-se` (568 px tall, the worst case), `iphone-13`, `pixel-5`, `desktop` (1280×720).
 - `--cta` is a regex on the button text (default: continue, next, save, submit, confirm, done, ok, allow, get
   started). `--labels hidden=…,none=…` changes the words in the console summary.
+- `--camera` grants the camera permission and a fake camera feed (only for screens that ask for it).
+- A screen that fails becomes an `error` row; `results.json` is still written and the exit code is 1.
 - `--init-script <file.js>` runs before the page's own scripts, for stubbing an SDK that never finishes in headless
   Chrome.
 - Embedded in an iframe? Also run `scripts/iframe-shots.mjs` (see its header): it checks the CTA is on screen without

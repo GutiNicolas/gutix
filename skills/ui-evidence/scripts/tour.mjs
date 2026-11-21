@@ -2,15 +2,17 @@
 // Walks each screen x device, measures the primary CTA and inner scrollers, saves screenshots + results.json.
 //   node tour.mjs --phase before --base http://127.0.0.1:8080/app --screens home,signup,checkout \
 //     [--devices iphone-se,desktop] [--steps signup=3,checkout=2] [--out <dir>] [--cta "^(continue|next)$"] \
-//     [--query lang=en] [--init-script <file.js>] [--labels hidden=HIDDEN,none=no CTA]
+//     [--query lang=en] [--init-script <file.js>] [--camera] [--labels hidden=HIDDEN,none=no CTA]
 // Screens are <base>/<id>?<query>. An id of "-" means the base itself. --steps makes the tour click the CTA and
 // measure the next screens as well (without it only the first one is measured).
+// An id of "-" is the base itself (also in --steps, e.g. -=2); an id may hold "/" for nested routes.
+// --camera grants the camera permission and a fake feed (for screens that ask for it).
 // --init-script runs in every page before its own scripts (stub an SDK that never finishes in headless Chrome).
 // Playwright and Chrome: see lib.mjs. Output: <out>/<phase>/results.json and one PNG per screen x device x step.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { DESKTOP_VIEWPORT, DEVICE_NAMES, buildCtaRegex, ctaPosition, fail, loadBrowser, missingArgs, parseArgs, parseLabels, parseList, parseSteps, screenUrl, verdict } from './lib.mjs';
+import { DESKTOP_VIEWPORT, DEVICE_NAMES, buildCtaRegex, collectRows, ctaPosition, exitCodeFor, fail, fileId, loadBrowser, missingArgs, parseArgs, parseLabels, parseList, parseSteps, screenUrl, stepsFor, verdict } from './lib.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 const missing = missingArgs(args, ['base', 'screens']);
@@ -35,7 +37,6 @@ if (!/^[A-Za-z0-9._-]+$/.test(PHASE)) fail(`--phase "${PHASE}" must be file-safe
 const OUT = path.join(typeof args.out === 'string' ? args.out : path.join(os.tmpdir(), 'ui-evidence', 'shots'), PHASE);
 const QUERY = typeof args.query === 'string' ? args.query : '';
 const DEFAULT_MAX_STEPS = 1;
-const fileId = (id) => (id === '' ? 'base' : id);
 
 async function measure(page) {
   const raw = await page.evaluate((ctaSource) => {
@@ -61,50 +62,57 @@ async function measure(page) {
 
 const { chromium, devices, launch } = loadBrowser();
 fs.mkdirSync(OUT, { recursive: true });
-const browser = await chromium.launch({ ...launch, args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
+const camera = args.camera === true;
+const browser = await chromium.launch({ ...launch, ...(camera ? { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] } : {}) });
 const results = [];
-try {
-  for (const screenId of screenIds) {
-    for (const deviceName of deviceNames) {
-      const name = DEVICE_NAMES[deviceName];
-      const context = await browser.newContext({ ...(name ? devices[name] : { viewport: DESKTOP_VIEWPORT }), permissions: ['camera'] });
-      if (initScript) await context.addInitScript(initScript);
-      const page = await context.newPage();
-      try {
-        await page.goto(screenUrl(args.base, screenId, QUERY), { waitUntil: 'load', timeout: 30000 });
-        await page.waitForTimeout(1500);
-      } catch (error) {
-        results.push({ screenId: fileId(screenId), deviceName, error: String(error).slice(0, 200) });
-        await context.close();
-        continue;
-      }
-      const seen = new Set();
-      const maxSteps = maxStepsByScreen[screenId] || DEFAULT_MAX_STEPS;
-      for (let step = 1; step <= maxSteps; step++) {
-        await page.getByRole('button', { name: CTA }).last().waitFor({ state: 'visible', timeout: step === 1 ? 20000 : 6000 }).catch(() => {});
-        await page.waitForTimeout(700);
-        const data = await measure(page);
-        const key = `${data.heading}|${data.buttonText}`;
-        if (seen.has(key)) break;
-        seen.add(key);
-        const file = path.join(OUT, `${fileId(screenId)}-${deviceName}-step${step}.png`);
-        await page.screenshot({ path: file });
-        results.push({ screenId: fileId(screenId), deviceName, step, file, ...data });
-        const button = page.getByRole('button', { name: CTA }).last();
-        const isEnabled = await button.isEnabled().catch(() => false);
-        if (!data.buttonText || !isEnabled) break;
-        await button.click({ timeout: 5000 }).catch(() => {});
-        await page.waitForTimeout(1500);
-      }
-      await context.close();
-    }
-  }
-} finally { await browser.close(); }
+const units = screenIds.flatMap((screenId) => deviceNames.map((deviceName) => ({ screenId, deviceName })));
 
-fs.writeFileSync(path.join(OUT, 'results.json'), JSON.stringify(results, null, 2));
+async function tourOne({ screenId, deviceName }) {
+  const name = DEVICE_NAMES[deviceName];
+  const context = await browser.newContext({ ...(name ? devices[name] : { viewport: DESKTOP_VIEWPORT }), ...(camera ? { permissions: ['camera'] } : {}) });
+  try {
+    if (initScript) await context.addInitScript(initScript);
+    const page = await context.newPage();
+    try {
+      await page.goto(screenUrl(args.base, screenId, QUERY), { waitUntil: 'load', timeout: 30000 });
+      await page.waitForTimeout(1500);
+    } catch (error) {
+      results.push({ screenId: fileId(screenId), deviceName, error: String(error).slice(0, 200) });
+      return;
+    }
+    const seen = new Set();
+    const maxSteps = stepsFor(maxStepsByScreen, screenId) || DEFAULT_MAX_STEPS;
+    for (let step = 1; step <= maxSteps; step++) {
+      await page.getByRole('button', { name: CTA }).last().waitFor({ state: 'visible', timeout: step === 1 ? 20000 : 6000 }).catch(() => {});
+      await page.waitForTimeout(700);
+      const data = await measure(page);
+      const key = `${data.heading}|${data.buttonText}`;
+      if (seen.has(key)) break;
+      seen.add(key);
+      const file = path.join(OUT, `${fileId(screenId)}-${deviceName}-step${step}.png`);
+      await page.screenshot({ path: file });
+      results.push({ screenId: fileId(screenId), deviceName, step, file, ...data });
+      const button = page.getByRole('button', { name: CTA }).last();
+      const isEnabled = await button.isEnabled().catch(() => false);
+      if (!data.buttonText || !isEnabled) break;
+      await button.click({ timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(1500);
+    }
+  } finally { await context.close(); }
+}
+
+try {
+  await collectRows(units, ({ screenId, deviceName }) => ({ screenId: fileId(screenId), deviceName }), tourOne, results);
+} finally {
+  await browser.close();
+  fs.writeFileSync(path.join(OUT, 'results.json'), JSON.stringify(results, null, 2));
+}
+
 for (const r of results) {
   if (r.error) { console.log(`${r.screenId} ${r.deviceName} ERROR ${r.error}`); continue; }
   const scroll = r.scrollers.map((s) => `${s.tag}+${s.overflowPx}`).join(' ');
   console.log(`${r.screenId.padEnd(23)} ${r.deviceName.padEnd(9)} p${r.step} ${verdict(r.isButtonVisible, LABELS).padEnd(7)} btn=${r.buttonTop}-${r.buttonBottom}/${r.viewportHeight} pageOverflow=${r.pageOverflowPx} ${scroll} | ${r.heading}`);
 }
 console.log(`\nresults: ${path.join(OUT, 'results.json')}`);
+if (exitCodeFor(results)) console.error('some screens failed (rows marked ERROR); exiting 1');
+process.exitCode = exitCodeFor(results);

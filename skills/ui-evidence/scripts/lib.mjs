@@ -43,6 +43,31 @@ export function parseSteps(value) {
   return steps;
 }
 
+// The step count for a screen; the base screen ("" internally) is written "-" in --steps.
+export function stepsFor(steps, screenId) {
+  return steps[screenId === '' ? '-' : screenId];
+}
+
+// Screen id as used in file names and result rows: "" is "base", "/" becomes "_".
+export function fileId(id) {
+  return id === '' ? 'base' : id.replace(/\//g, '_');
+}
+
+// Runs work(unit) for each unit; one that throws becomes an error row (describe(unit) + error) and the loop goes on,
+// so a single bad screen never loses the rest of a long run.
+export async function collectRows(units, describe, work, rows) {
+  for (const unit of units) {
+    try { await work(unit); } catch (error) { rows.push({ ...describe(unit), error: String(error).slice(0, 200) }); }
+  }
+}
+
+export const exitCodeFor = (rows) => (rows.some((r) => r.error) ? 1 : 0);
+
+// new Response(body, { status }) throws for these statuses when body is not null.
+export function mockBody(hit) {
+  return [101, 204, 205, 304].includes(hit.status) ? null : JSON.stringify(hit.body);
+}
+
 export function buildCtaRegex(source) {
   const pattern = typeof source === 'string' && source !== '' ? source : DEFAULT_CTA_SOURCE;
   try { return new RegExp(pattern, 'i'); } catch (error) { throw new Error(`--cta: invalid regex "${pattern}" (${error.message})`); }
@@ -67,7 +92,7 @@ export function parseLabels(value) {
 // The page for one screen: <base>/<id>?<query>. An empty id means the base itself.
 export function screenUrl(base, screenId, query = '') {
   const root = String(base).replace(/\/+$/, '');
-  const url = screenId === '' ? root : `${root}/${encodeURIComponent(screenId)}`;
+  const url = screenId === '' ? root : `${root}/${screenId.split('/').map(encodeURIComponent).join('/')}`;
   return query ? `${url}?${query}` : url;
 }
 

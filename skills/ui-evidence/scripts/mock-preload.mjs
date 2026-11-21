@@ -4,7 +4,7 @@
 // Fixtures: { "routes": [ { "match": "<regex on the URL>", "method"?: "GET", "status"?: 200, "body": <json> } ] }
 // The first matching route wins. See fixtures.example.json.
 import fs from 'node:fs';
-import { mockRoute, validateFixtures } from './lib.mjs';
+import { mockBody, mockRoute, validateFixtures } from './lib.mjs';
 
 const fixturesPath = process.env.MOCK_FIXTURES;
 if (!fixturesPath) throw new Error('mock-preload: set MOCK_FIXTURES=/path/to/fixtures.json');
@@ -18,7 +18,7 @@ globalThis.fetch = async (input, init) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
   const method = init?.method ?? (typeof input === 'object' && 'method' in input ? input.method : 'GET');
   const hit = mockRoute(fixtures, url, method);
-  if (hit) return new Response(JSON.stringify(hit.body), { status: hit.status, headers: { 'content-type': 'application/json' } });
+  if (hit) return new Response(mockBody(hit), { status: hit.status, headers: { 'content-type': 'application/json' } });
   return realFetch(input, init);
 };
 

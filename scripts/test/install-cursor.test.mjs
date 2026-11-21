@@ -40,6 +40,8 @@ function fixturePlugin({ version = '1.2.3' } = {}) {
     '    description: What', '    required: false', '---', '', '# Alpha',
     'See [beta](../beta/SKILL.md) and run `node ../beta/scripts/x.mjs`; deeper: `../../beta/scripts/x.mjs`.',
     'Not a sibling: ../elsewhere/x.md and docs/beta/y.md', '',
+    'Refs: use acme:beta, or /acme:beta, or `acme:beta`; but not acme:betas, xacme:beta, a.acme:beta or acme:unknown.',
+    'Skipped in Cursor: acme:ship stays as written.', '',
   ].join('\n'));
   write(path.join(dir, 'skills/alpha/scripts/use.mjs'), "import { x } from '../../beta/scripts/x.mjs';\nexport default x;\n");
   write(path.join(dir, 'skills/beta/SKILL.md'), '---\nname: beta\ndescription: Beta skill\n---\n\n# Beta\n');
@@ -67,8 +69,10 @@ test('another plugin and prefix: names, rewritten links, frontmatter, version, r
   // everything else is the source, byte for byte, apart from the sibling links
   const source = read(path.join(plugin, 'skills/alpha/SKILL.md')).split('\n');
   const body = source.slice(source.indexOf('---', 1));
-  assert.equal(alpha.split('\n').slice(-body.length).join('\n').replaceAll('../acme-beta/', '../beta/').replaceAll('../../acme-beta/', '../../beta/'), body.join('\n'));
+  assert.equal(alpha.split('\n').slice(-body.length).join('\n').replaceAll('../acme-beta/', '../beta/').replaceAll('../../acme-beta/', '../../beta/').replace('use acme-beta, or /acme-beta, or `acme-beta`;', 'use acme:beta, or /acme:beta, or `acme:beta`;'), body.join('\n'));
   assert.ok(alpha.includes('(../acme-beta/SKILL.md)') && alpha.includes('node ../acme-beta/scripts/x.mjs') && alpha.includes('`../../acme-beta/scripts/x.mjs`'));
+  assert.ok(alpha.includes('use acme-beta, or /acme-beta, or `acme-beta`;'), 'plugin:skill mentions become the Cursor skill name');
+  assert.ok(alpha.includes('not acme:betas, xacme:beta, a.acme:beta or acme:unknown.') && alpha.includes('acme:ship stays as written'), 'other tokens and skipped skills stay');
   assert.ok(alpha.includes('../elsewhere/x.md') && alpha.includes('docs/beta/y.md'), 'only sibling skills are rewritten');
   assert.match(read(path.join(t, 'skills/acme-alpha/scripts/use.mjs')), /'\.\.\/\.\.\/acme-beta\/scripts\/x\.mjs'/);
 
@@ -156,6 +160,9 @@ test('gutix itself: every skill but the Claude-only ones as gutix-<x>, same vers
   for (const s of expected) assert.match(read(path.join(t, 'skills', s, 'SKILL.md')), new RegExp(`^---\\nname: ${s}\\n`));
   assert.equal(JSON.parse(read(path.join(t, '.cursor-plugin/plugin.json'))).version, JSON.parse(read(path.join(root, '.claude-plugin/plugin.json'))).version);
   assert.match(read(path.join(t, 'skills/gutix-pr-review/SKILL.md')), /\n## In Cursor\n/);
+  const all = walk(t).filter((p) => p.endsWith('.md')).map(read).join('\n');
+  for (const s of expected) assert.ok(!all.includes(`gutix:${s.slice('gutix-'.length)}`), `a mention of ${s} was not rewritten`);
+  assert.ok(all.includes('gutix-sign-off') && all.includes('gutix:ship'), 'copied skills are renamed, the skipped ship keeps its name');
 
   const tests = spawnSync('node', ['--test', path.join(t, 'skills/gutix-design-doc/scripts/test/design-doc.test.mjs')], { encoding: 'utf8', env: { ...process.env, HOME: home } });
   assert.equal(tests.status, 0, tests.stdout.slice(-1500));

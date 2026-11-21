@@ -3,7 +3,9 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { spawnSync } from 'node:child_process';
+import readline from 'node:readline/promises';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // Skills that only make sense in Claude Code. They are skipped by install-cursor unless the plugin ships an
 // override for them in cursor/overrides/<skill>.md.
@@ -65,6 +67,15 @@ function rewriteSiblings(text, siblings, prefix) {
   if (!siblings.length) return text;
   const alt = siblings.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   return text.replace(new RegExp(`(?<![\\w.-])((?:\\.\\./)+)(${alt})/`, 'g'), (_, up, name) => `${up}${prefix}${name}/`);
+}
+
+// `<plugin>:<skill>` -> `<prefix><skill>` for the skills that are copied (a whole token: `gutix:sign-off`, not
+// `gutix:sign-offs` or `x.gutix:sign-off`). A skill that is skipped keeps its Claude name.
+function rewritePluginRefs(text, plugin, skills, prefix) {
+  if (!skills.length) return text;
+  const esc = (v) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const alt = skills.map(esc).join('|');
+  return text.replace(new RegExp(`(?<![\\w.:-])${esc(plugin)}:(${alt})(?![\\w-])`, 'g'), (_, name) => `${prefix}${name}`);
 }
 
 function copyTree(src, dest, transform, rel = '') {
@@ -136,7 +147,12 @@ function installCursor(argv) {
   const { opts, positional } = parseArgs(argv, { values: ['prefix'], lists: ['project'], bools: ['replace-port'] });
   if (positional.length !== 1) throw new UsageError('install-cursor needs exactly one plugin folder');
   if (!opts.prefix || !/^[a-z0-9-]+$/.test(opts.prefix)) throw new UsageError('--prefix is required (lowercase letters, digits, dashes), e.g. --prefix gutix-');
-  const folder = path.resolve(positional[0]);
+  installCursorCopy({ folder: positional[0], prefix: opts.prefix, projects: opts.project, replacePort: opts['replace-port'] });
+}
+
+function installCursorCopy({ folder: folderArg, prefix, projects = [], replacePort = false, quiet = false }) {
+  const opts = { prefix, project: projects, 'replace-port': replacePort };
+  const folder = path.resolve(folderArg);
   const claudeJson = path.join(folder, '.claude-plugin/plugin.json');
   if (!exists(claudeJson)) throw new Error(`${folder} is not a Claude plugin (no .claude-plugin/plugin.json)`);
   const meta = readJson(claudeJson);
@@ -172,7 +188,7 @@ function installCursor(argv) {
   for (const x of skills) {
     const dest = path.join(target, 'skills', `${opts.prefix}${x}`);
     const rewrite = (text, file) => {
-      const body = rewriteSiblings(text, siblings, opts.prefix);
+      const body = rewritePluginRefs(rewriteSiblings(text, siblings, prefix), meta.name, siblings, prefix);
       // Only the skill's own top-level SKILL.md has the frontmatter Cursor reads.
       return file === 'SKILL.md' ? rewriteFrontmatter(body, `${opts.prefix}${x}`) : body;
     };
@@ -210,19 +226,193 @@ function installCursor(argv) {
   const generatedSkills = skills.map((x) => `${opts.prefix}${x}`).sort();
   fs.writeFileSync(path.join(target, MANIFEST), `${JSON.stringify({ generator: 'gutix install-cursor', plugin: meta.name, prefix: opts.prefix, skills: generatedSkills, agents: agents.slice().sort() }, null, 2)}\n`);
 
+  if (quiet) return;
   for (const c of findClashes({ names: generatedSkills, ownTarget: target, projects: opts.project.map((p) => path.resolve(p)) })) {
     process.stderr.write(`warning: clash, ${c} has the same name as a generated skill; Cursor may load both\n`);
   }
   process.stdout.write(`installed ${skills.length} skills of ${meta.name} ${meta.version} to ${target}${skipped.length ? ` (Claude-only, skipped: ${skipped.join(', ')})` : ''}\n`);
 }
 
+// ---- org profiles, install, update ----------------------------------------------------------------------------
+
+const cfgDir = () => path.join(home(), '.config/gutix');
+const orgsDir = () => path.join(cfgDir(), 'orgs');
+const registryFile = () => path.join(cfgDir(), 'orgs.json');
+const configFile = () => path.join(cfgDir(), 'config.json');
+const stampFile = () => path.join(cfgDir(), 'last-update');
+// GUTIX_ROOT lets tests point `update` at a fixture instead of this checkout.
+const gutixRoot = () => path.resolve(process.env.GUTIX_ROOT || path.join(path.dirname(fileURLToPath(import.meta.url)), '..'));
+const ORG_NAME = /^[a-z0-9][a-z0-9-]*$/;
+const note = (m) => process.stdout.write(`${m}\n`);
+const warn = (m) => process.stderr.write(`warning: ${m}\n`);
+
+function readRegistry() {
+  if (!exists(registryFile())) return { orgs: [] };
+  const reg = readJson(registryFile());
+  if (!Array.isArray(reg.orgs)) throw new Error(`${registryFile()} has no "orgs" list`);
+  return reg;
+}
+function writeJson(file, value) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
+}
+function readConfig() {
+  try { return readJson(configFile()); } catch { return {}; }
+}
+
+function git(args, { cwd, timeout = 120000 } = {}) {
+  const r = spawnSync('git', args, { cwd, encoding: 'utf8', timeout, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } });
+  const err = (r.error ? r.error.message : r.stderr || '').trim().split('\n').filter(Boolean).slice(-2).join(' ');
+  return { ok: r.status === 0, out: (r.stdout || '').trim(), err };
+}
+
+function pluginName(folder) {
+  try { return readJson(path.join(folder, '.claude-plugin/plugin.json')).name; } catch { return null; }
+}
+
+function linkOrg({ url, branch, cursor = true, projects = [], replacePort = false }) {
+  if (!url) throw new UsageError('link-org needs the org repo link, e.g. https://github.com/<org>/<repo>');
+  fs.mkdirSync(orgsDir(), { recursive: true });
+  const tmp = path.join(orgsDir(), `.clone-${process.pid}-${Date.now()}`);
+  const clone = git(['clone', '--quiet', ...(branch ? ['--branch', branch] : []), '--', url, tmp]);
+  if (!clone.ok) { fs.rmSync(tmp, { recursive: true, force: true }); throw new Error(`could not clone ${url}${branch ? ` (branch ${branch})` : ''}: ${clone.err}`); }
+  try {
+    if (!exists(path.join(tmp, 'gutix-org.json'))) throw new Error('that repo has no gutix-org.json at its root, so it is not an org profile (gutix new-org writes one)');
+    const profile = readJson(path.join(tmp, 'gutix-org.json'));
+    if (!ORG_NAME.test(profile.name || '')) throw new Error('gutix-org.json needs a "name" of lowercase letters, digits and dashes');
+    const reg = readRegistry();
+    const dest = path.join(orgsDir(), profile.name);
+    if (exists(dest) || reg.orgs.some((o) => o.name === profile.name)) throw new Error(`org "${profile.name}" is already linked; run gutix update to pull it`);
+    fs.renameSync(tmp, dest);
+    const current = git(['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: dest }).out;
+    reg.orgs.push({ name: profile.name, path: dest, git: url, ...(branch || current ? { branch: branch || current } : {}) });
+    writeJson(registryFile(), reg);
+    note(`linked org ${profile.name} at ${dest}`);
+    const isPlugin = exists(path.join(dest, '.claude-plugin/plugin.json'));
+    if (isPlugin && cursor) installCursorCopy({ folder: dest, prefix: `${profile.name}-`, projects, replacePort });
+    else if (!isPlugin) note(`${profile.name} is a profile only (no .claude-plugin/plugin.json), so there is no Cursor copy`);
+    if (exists(path.join(dest, '.claude-plugin/marketplace.json'))) note(`Claude Code: /plugin marketplace add ${url}${branch ? `#${branch}` : ''}`);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+function newOrg(name) {
+  if (!ORG_NAME.test(name || '')) throw new UsageError('new-org needs a name of lowercase letters, digits and dashes, e.g. acme');
+  const dest = path.join(orgsDir(), name);
+  const reg = readRegistry();
+  if ((exists(dest) && fs.readdirSync(dest).length > 0) || reg.orgs.some((o) => o.name === name)) {
+    throw new Error(`org "${name}" already exists at ${dest}; not overwriting`);
+  }
+  const skeleton = path.join(path.dirname(fileURLToPath(import.meta.url)), 'org-skeleton');
+  fs.mkdirSync(dest, { recursive: true });
+  for (const f of fs.readdirSync(skeleton)) {
+    fs.writeFileSync(path.join(dest, f), fs.readFileSync(path.join(skeleton, f), 'utf8').replaceAll('{{name}}', name));
+  }
+  reg.orgs.push({ name, path: dest });
+  writeJson(registryFile(), reg);
+  note(`created ${dest}: edit "match" in gutix-org.json and the colors in theme.css (README.md explains each file)`);
+}
+
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+// Pulls gutix and every linked org, then regenerates the Cursor copies that exist. Never throws: a session must not fail.
+function update({ daily = false, ifOptedIn = false } = {}) {
+  const say = daily ? () => {} : note; // daily runs print nothing on stdout: a SessionStart hook's stdout becomes context
+  try {
+    if (ifOptedIn && readConfig().autoUpdate !== 'daily') return;
+    if (daily && exists(stampFile()) && fs.readFileSync(stampFile(), 'utf8').trim() === today()) return;
+
+    const targets = [{ name: 'gutix', dir: gutixRoot() }];
+    try { for (const o of readRegistry().orgs) targets.push({ name: o.name, dir: o.path }); } catch (e) { warn(e.message); }
+    for (const t of targets) {
+      try {
+        if (!isDir(t.dir)) { warn(`${t.name}: ${t.dir} is missing, skipped`); continue; }
+        if (exists(path.join(t.dir, '.git'))) {
+          const pull = git(['pull', '--ff-only', '--quiet'], { cwd: t.dir, timeout: daily ? 20000 : 120000 });
+          if (pull.ok) say(`${t.name}: pulled`); else warn(`${t.name}: could not pull (${pull.err || 'git failed'}); keeping what is here`);
+        } else say(`${t.name}: not a git checkout, pull skipped`);
+        const plugin = pluginName(t.dir);
+        const manifest = plugin && path.join(home(), '.cursor/plugins/local', plugin, MANIFEST);
+        if (manifest && exists(manifest)) installCursorCopy({ folder: t.dir, prefix: readJson(manifest).prefix, quiet: daily });
+      } catch (e) { warn(`${t.name}: ${e.message}`); }
+    }
+    fs.mkdirSync(cfgDir(), { recursive: true });
+    if (daily) fs.writeFileSync(stampFile(), `${today()}\n`);
+  } catch (e) { warn(`update: ${e.message}`); }
+}
+
+async function install(argv) {
+  const { opts } = parseArgs(argv, {
+    values: ['org', 'branch', 'skeleton', 'auto-update'], lists: ['project'],
+    bools: ['cursor', 'no-cursor', 'no-org', 'no-skeleton', 'replace-port', 'yes'],
+  });
+  const interactive = Boolean(process.stdin.isTTY) && !opts.yes;
+  const rl = interactive ? readline.createInterface({ input: process.stdin, output: process.stdout }) : null;
+  // Without a terminal an unanswered question means "no" (or "skip"), never the interactive default.
+  const ask = async (question, def, silent = '') => {
+    if (!rl) return silent;
+    const a = (await rl.question(`${question} `)).trim();
+    return a === '' ? def : a;
+  };
+  const yes = (a) => /^y/i.test(String(a));
+  try {
+    const wantCursor = opts.cursor ? true : opts['no-cursor'] ? false : yes(await ask('Make a Cursor copy of gutix? [Y/n]', 'y', 'n'));
+    if (wantCursor) installCursorCopy({ folder: gutixRoot(), prefix: 'gutix-', projects: opts.project, replacePort: opts['replace-port'] });
+
+    let orgUrl = opts['no-org'] ? '' : opts.org;
+    let branch = opts.branch;
+    if (orgUrl === undefined) {
+      orgUrl = await ask("Link your company's org plugin? Paste its git link (https://github.com/<org>/<repo>) or press Enter to skip:", '');
+      if (orgUrl && branch === undefined) branch = (await ask('Branch to follow (Enter for the default branch):', '')) || undefined;
+    }
+    if (orgUrl) linkOrg({ url: orgUrl, branch, cursor: wantCursor, projects: opts.project, replacePort: opts['replace-port'] });
+    else {
+      const skeleton = opts['no-skeleton'] ? '' : opts.skeleton ?? await ask('Create a personal org profile for your own theme? Enter a name (e.g. acme) or press Enter to skip:', '');
+      if (skeleton) newOrg(skeleton);
+    }
+
+    const auto = opts['auto-update'] ?? (await ask('Update gutix and your orgs automatically, once a day, when a Claude Code session starts? [y/N]', readConfig().autoUpdate === 'daily' ? 'y' : 'n', readConfig().autoUpdate === 'daily' ? 'y' : 'n'));
+    const mode = auto === 'daily' || yes(auto) ? 'daily' : 'off';
+    writeJson(configFile(), { ...readConfig(), autoUpdate: mode });
+    note(`auto-update: ${mode}`);
+    note(`To update later: ${path.join(path.dirname(fileURLToPath(import.meta.url)), 'gutix-update')}`);
+  } finally {
+    rl?.close();
+  }
+}
+
 // ---- dispatch ------------------------------------------------------------------------------------------------
 
 const COMMANDS = {
   'install-cursor': { run: installCursor, usage: 'install-cursor <plugin-folder> --prefix <p> [--project <dir>]... [--replace-port]' },
+  install: { run: install, usage: 'install [--cursor|--no-cursor] [--org <git-url> [--branch <b>] | --no-org] [--skeleton <name> | --no-skeleton] [--auto-update daily|off] [--project <dir>]... [--replace-port] [--yes]' },
+  'link-org': {
+    run: (argv) => {
+      const { opts, positional } = parseArgs(argv, { values: ['branch'], lists: ['project'], bools: ['no-cursor', 'replace-port'] });
+      if (positional.length !== 1) throw new UsageError('link-org needs exactly one git link');
+      linkOrg({ url: positional[0], branch: opts.branch, cursor: !opts['no-cursor'], projects: opts.project, replacePort: opts['replace-port'] });
+    },
+    usage: 'link-org <git-url> [--branch <b>] [--no-cursor] [--project <dir>]...',
+  },
+  'new-org': {
+    run: (argv) => {
+      const { positional } = parseArgs(argv, {});
+      if (positional.length !== 1) throw new UsageError('new-org needs exactly one name');
+      newOrg(positional[0]);
+    },
+    usage: 'new-org <name>',
+  },
+  update: {
+    run: (argv) => {
+      const { opts } = parseArgs(argv, { bools: ['daily', 'if-opted-in'] });
+      update({ daily: opts.daily, ifOptedIn: opts['if-opted-in'] });
+    },
+    usage: 'update [--daily] [--if-opted-in]',
+  },
 };
 
-function main(argv) {
+async function main(argv) {
   const [cmd, ...rest] = argv;
   const entry = COMMANDS[cmd];
   if (!entry) {
@@ -230,7 +420,7 @@ function main(argv) {
     return cmd && cmd !== '--help' && cmd !== 'help' ? 2 : 0;
   }
   try {
-    entry.run(rest);
+    await entry.run(rest);
     return 0;
   } catch (e) {
     process.stderr.write(`error: ${e.message}\n`);
@@ -239,4 +429,4 @@ function main(argv) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href) process.exit(main(process.argv.slice(2)));
+if (process.argv[1] && import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href) process.exitCode = await main(process.argv.slice(2));

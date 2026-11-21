@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const SKIP_DIRS = new Set(['node_modules', '.git']);
@@ -54,6 +55,16 @@ function walk(dir) {
 		else files.push(full);
 	}
 	return files;
+}
+
+// Every file that belongs to the repo: tracked, plus untracked that git does not ignore. A walk would also reach
+// git-excluded folders (local plans, .claude/worktrees). Outside git (temp plugins in tests) it falls back to a walk.
+function repoFiles(root) {
+	const r = spawnSync('git', ['-C', root, 'ls-files', '-z', '-co', '--exclude-standard'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+	if (r.status !== 0) return walk(root);
+	return r.stdout.split('\0').filter((f) => f && !f.endsWith('/')).map((f) => path.join(root, f)).filter((f) => {
+		try { return fs.statSync(f).isFile(); } catch { return false; }
+	});
 }
 
 function readText(file) {
@@ -138,12 +149,6 @@ export function validate(root, { privateNames = undefined } = {}) {
 			});
 		}
 		for (const tool of CLAUDE_TOOL_NAMES) claudeToolNames[tool] += countOccurrences(text, tool);
-		if (names) {
-			const lower = lines.map((l) => l.toLowerCase());
-			lower.forEach((line, i) => {
-				if (names.some((n) => line.includes(n))) problems.push(`${rel(file)}:${i + 1}: matches the private-names list`);
-			});
-		}
 		// Templates link to files that exist only once copied into a feature folder.
 		if (file.endsWith('.md') && !file.split(path.sep).includes('templates')) {
 			for (const link of extractLinks(text)) {
@@ -151,6 +156,16 @@ export function validate(root, { privateNames = undefined } = {}) {
 				const target = path.resolve(path.dirname(file), link.split('#')[0]);
 				if (!fs.existsSync(target)) problems.push(`${rel(file)}: broken link ${link}`);
 			}
+		}
+	}
+	// Private names: every file of the repo (help text, cursor/, CHANGELOG, plugin.json, workflows, tests...).
+	if (names && names.length) {
+		for (const file of repoFiles(root)) {
+			const text = readText(file);
+			if (text === null) continue;
+			text.toLowerCase().split('\n').forEach((line, i) => {
+				if (names.some((n) => line.includes(n))) problems.push(`${rel(file)}:${i + 1}: matches the private-names list`);
+			});
 		}
 	}
 	if (!names) notices.push('private-names list not found: skipped that check (set GUTIX_PRIVATE_NAMES to run it)');

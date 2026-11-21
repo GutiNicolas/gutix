@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { validate } from '../validate.mjs';
 
@@ -116,4 +116,40 @@ test('IDE tool names fail in skills/ and the README; Claude Code tool names are 
 	assert.match(problems.join('\n'), /SKILL\.md:5: IDE tool name AskQuestion/);
 	assert.match(problems.join('\n'), /README\.md:1: IDE tool name block_until_ms/);
 	assert.deepEqual(claudeToolNames, { AskUserQuestion: 2, subagent_type: 1 });
+});
+
+test('private names are scanned in scripts/, cursor/, CHANGELOG, plugin.json and .github, not only skills/ and the README', () => {
+	for (const file of ['scripts/a.mjs', 'cursor/overrides/alpha.md', 'CHANGELOG.md', '.claude-plugin/plugin.json', '.github/workflows/v.yml', 'scripts/test/t.mjs']) {
+		const { problems } = run({ [file]: 'one\nfor ACME only\n' }, ['acme']);
+		assert.deepEqual(problems, [`${file}: matches the private-names list`.replace(file, `${file}:2`)], file);
+	}
+});
+
+test('private names: untracked-and-ignored and git-excluded files pass, tracked and untracked-not-ignored files fail, binaries are skipped', () => {
+	const root = plugin({ '.gitignore': 'ignored.md\n', 'tracked.md': 'x\n' });
+	execFileSync('git', ['init', '-q', root]);
+	execFileSync('git', ['-C', root, 'add', '-A']);
+	fs.mkdirSync(path.join(root, 'plans'));
+	fs.appendFileSync(path.join(root, '.git/info/exclude'), 'plans/\n');
+	fs.writeFileSync(path.join(root, 'plans/p.md'), 'acme\n');
+	fs.writeFileSync(path.join(root, 'ignored.md'), 'acme\n');
+	assert.deepEqual(validate(root, { privateNames: ['acme'] }).problems, []);
+
+	fs.writeFileSync(path.join(root, 'tracked.md'), 'acme\n');
+	fs.writeFileSync(path.join(root, 'new.md'), 'acme\n');
+	fs.writeFileSync(path.join(root, 'image.bin'), Buffer.from([0, 97, 99, 109, 101]));
+	const { problems } = validate(root, { privateNames: ['acme'] });
+	assert.deepEqual(problems.sort(), ['new.md:1: matches the private-names list', 'tracked.md:1: matches the private-names list']);
+});
+
+test('private names: a tracked file deleted from disk does not crash the scan', () => {
+	const root = plugin({ 'gone.md': 'x\n' });
+	execFileSync('git', ['init', '-q', root]);
+	execFileSync('git', ['-C', root, 'add', '-A']);
+	fs.rmSync(path.join(root, 'gone.md'));
+	assert.deepEqual(validate(root, { privateNames: ['acme'] }).problems, []);
+});
+
+test('the IDE tool-name check stays on skills/ and the README: cursor/overrides may name Cursor tools', () => {
+	assert.deepEqual(run({ 'cursor/overrides/alpha.md': 'Use AskQuestion and block_until_ms.\n' }).problems, []);
 });

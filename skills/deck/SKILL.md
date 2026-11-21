@@ -17,9 +17,12 @@ Requires:
 - The repo that holds the topic, as the workspace. Another repo → say so and ask whether to research that
   one instead.
 - Chrome or Chromium for the PDF and the visual check (`$CHROME_PATH`, the macOS app, or `google-chrome`,
-  `chromium`, `chromium-browser` on `PATH`; `node ../design-doc/scripts/render.mjs --find-chrome` prints the one it
+  `chromium`, `chromium-browser` on `PATH`; `node <skill>/../design-doc/scripts/render.mjs --find-chrome` prints the one it
   would use). None → skip the screenshots and the PDF, and say so.
 - Optional: a metrics MCP for measured numbers.
+
+`<skill>` is this skill's folder (where this SKILL.md was loaded from); design-doc is its sibling. Use absolute
+paths: the commands run in the user's repo, not in the skill.
 
 > **This skill carries method, not facts.** Every number, flag and name in its templates is a placeholder. Re-read
 > the source before anything goes on a slide: a deck that faithfully repeats a stale note launders old information
@@ -67,7 +70,7 @@ when to use each archetype and which layout invariants to keep.
 
 1. Draft the outline as slide titles in chat, one screen. If the user already said to go ahead, generate at once.
 2. Copy the template to `docs/decks/<slug>.html`. Keep the archetypes you need, delete the rest, fill them.
-3. **Theme.** `node ../design-doc/scripts/theme.mjs --apply docs/decks/<slug>.html [--theme <css>]` writes the
+3. **Theme.** `node <skill>/../design-doc/scripts/theme.mjs --apply docs/decks/<slug>.html [--theme <css>]` writes the
    resolved theme (`--theme`, the nearest `.design-doc-theme.css`, the org profile's theme, the built-in one) between
    the `gutix-theme` markers. Use only `var(--token)` in the deck; a colour the theme lacks is a new token in the
    theme, not a literal.
@@ -105,7 +108,7 @@ Swap-ins by topic:
 Not done until you have looked at the slides.
 
 ```bash
-node ../design-doc/scripts/render.mjs docs/decks/<slug>.html --pdf --out docs/decks/<slug>.pdf
+node <skill>/../design-doc/scripts/render.mjs docs/decks/<slug>.html --pdf --out docs/decks/<slug>.pdf
 ```
 
 `render.mjs` is the only renderer: it finds Chrome, prints one 1920×1080 page per slide, and exits 0 on success. It

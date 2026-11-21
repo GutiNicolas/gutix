@@ -115,3 +115,9 @@ test('a broken theme is a setup error (exit 2), not a failed render (exit 1)', (
   const missing = spawnSync('node', [RENDER, FIG, '--png', '--theme', path.join(dir, 'nope.css')], { encoding: 'utf8', env: { ...process.env, CHROME_PATH: fakeChrome } });
   assert.equal(missing.status, 2, missing.stderr);
 });
+
+test('figuresOf keeps an svg that holds a nested svg whole', () => {
+  const html = '<figure class="diagram" id="n"><svg viewBox="0 0 500 200"><svg x="1" width="10"><rect/></svg><text>after</text></svg></figure>';
+  const [fig] = figuresOf(html);
+  assert.match(fig.svg, /<text>after<\/text><\/svg>$/);
+});

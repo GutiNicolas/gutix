@@ -54,15 +54,28 @@ const viewBoxOf = (svg) => {
   return m ? { width: Number(m[1]), height: Number(m[2]) } : { width: 0, height: 0 };
 };
 
+/** The first <svg>...</svg> of a string, closing tags matched by nesting; null if it never closes. */
+function svgOf(text) {
+  const start = text.search(/<svg\b/i);
+  if (start < 0) return null;
+  let depth = 0;
+  for (const m of text.slice(start).matchAll(/<(\/?)svg\b[^>]*>/gi)) {
+    if (m[1]) depth--;
+    else if (!m[0].endsWith('/>')) depth++;
+    if (depth === 0) return text.slice(start, start + m.index + m[0].length);
+  }
+  return null;
+}
+
 /** The figures of a design doc: each <figure class="diagram"> with an <svg>, named by its id (or its position). */
 export function figuresOf(html) {
   const out = [];
   for (const m of html.matchAll(/<figure\b([^>]*)>([\s\S]*?)<\/figure>/gi)) {
     if (!/\bclass\s*=\s*["'][^"']*\bdiagram\b/.test(m[1])) continue;
-    const svg = /<svg\b[\s\S]*?<\/svg>/i.exec(m[2]);
+    const svg = svgOf(m[2]);
     if (!svg) continue;
     const id = /\bid\s*=\s*["']([^"']+)["']/.exec(m[1])?.[1];
-    out.push({ name: id ?? `fig-${out.length + 1}`, svg: svg[0] });
+    out.push({ name: id ?? `fig-${out.length + 1}`, svg });
   }
   return out;
 }

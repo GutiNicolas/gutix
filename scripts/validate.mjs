@@ -158,7 +158,8 @@ export function validate(root, { privateNames = undefined } = {}) {
 	return { problems, notices, claudeToolNames };
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+// realpath on both sides: Node resolves symlinks in import.meta.url but not in argv[1] (macOS /tmp, linked checkouts).
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
 	const root = path.resolve(process.argv[2] ?? path.join(path.dirname(fileURLToPath(import.meta.url)), '..'));
 	const { problems, notices, claudeToolNames } = validate(root);
 	for (const notice of notices) console.log(`validate: ${notice}`);

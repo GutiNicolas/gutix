@@ -57,6 +57,15 @@ test('CLI: denylist match exits non-zero, missing list skips and exits zero', ()
 	assert.match(skipped.stdout, /skipped/);
 });
 
+test('CLI: run through a symlinked path (macOS /tmp, a linked checkout) it still checks and fails', () => {
+	const root = plugin({ 'skills/alpha/SKILL.md': '---\nname: wrong\ndescription: d\n---\n' });
+	const link = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'gutix-link-')), 'scripts');
+	fs.symlinkSync(path.dirname(script), link);
+	const res = spawnSync('node', [path.join(link, 'validate.mjs'), root], { encoding: 'utf8' });
+	assert.equal(res.status, 1);
+	assert.match(res.stderr, /must match folder/);
+});
+
 test('personal paths fail in skills/, scripts/ and cursor/', () => {
 	const home = ['', 'Users', 'someone', 'x'].join('/');
 	const linux = ['', 'home', 'someone', 'x'].join('/');

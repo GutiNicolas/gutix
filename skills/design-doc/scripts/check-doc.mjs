@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 // Checks a design-doc HTML before anyone reads it. No dependencies.
-//   node check-doc.mjs <doc.html> [--vocab <vocabulary.json>]
+//   node check-doc.mjs <doc.html> [--vocab <vocabulary.json>] [--theme <theme.css>]
 // Prints OK, or every problem, and exits 1.
 // Vocabulary: a JSON list of {"pattern": "regex", "flags": "i", "reason": "..."} applied to the visible text.
 // Without --vocab it uses the first .design-doc-vocabulary.json found from the doc's folder up to the repo root.
+// Figure colours must come from the theme: var(--token), or a literal that equals a theme value. The theme is --theme,
+// else the repo's, the org's or the default one (see theme.mjs).
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse, toMarkdown, twinPath } from './extract-llm.mjs';
+import { resolveTheme, themeValues } from './theme.mjs';
 
 const FIGURE_CAPTION = /^(?:Figure|Figura|Fig\.)\s+(\d+)\.\s+\S/;
 const MARKER = /<!--\s*svg\s+(D\d+)\s*-->/g;
@@ -25,6 +28,39 @@ const visibleText = (n) => {
 };
 const classes = (n) => (n.attrs?.class || '').split(/\s+/).filter(Boolean);
 
+// Colour keywords that are not a palette choice.
+const NEUTRAL = new Set(['none', 'transparent', 'currentcolor', 'inherit', 'initial', 'unset']);
+const COLOR_ATTRS = ['fill', 'stroke', 'stop-color', 'flood-color', 'lighting-color', 'color'];
+const COLOR_PROPS = new RegExp(`(?:^|[;{\\s])(${COLOR_ATTRS.join('|')})\\s*:\\s*([^;}]+)`, 'gi');
+
+/** `#fff` and `#ffffff` compare equal; everything else compares lower-cased with no spaces. */
+const normColor = (v) => {
+	const c = v.trim().toLowerCase().replace(/\s+/g, '');
+	const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/.exec(c);
+	return short ? `#${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}` : c;
+};
+
+/** The colours a figure uses that its theme does not offer. `allowed` is a Set of normalised theme values. */
+function strayColors(svg, tokens, allowed) {
+	const found = [];
+	const add = (v) => { if (v) found.push(v.trim()); };
+	walk(svg, (n) => {
+		if (!n.tag) return;
+		for (const a of COLOR_ATTRS) add(n.attrs?.[a]);
+		const css = n.tag === 'style' ? textOf(n) : n.attrs?.style;
+		if (css) for (const m of css.matchAll(COLOR_PROPS)) add(m[2]);
+	});
+	const stray = new Set();
+	for (const raw of found) {
+		const v = raw.replace(/\s*!important$/i, '');
+		const varRef = /^var\(\s*--([\w-]+)\s*(?:,[^)]*)?\)$/.exec(v);
+		if (varRef) { if (!(varRef[1] in tokens)) stray.add(`var(--${varRef[1]}) (the theme has no --${varRef[1]})`); continue; }
+		if (NEUTRAL.has(v.toLowerCase()) || /^url\(/i.test(v)) continue;
+		if (!allowed.has(normColor(v))) stray.add(v);
+	}
+	return [...stray];
+}
+
 function findVocabulary(docPath) {
 	let dir = path.dirname(path.resolve(docPath));
 	for (;;) {
@@ -35,7 +71,7 @@ function findVocabulary(docPath) {
 	}
 }
 
-export function checkDoc(docPath, { vocab } = {}) {
+export function checkDoc(docPath, { vocab, theme } = {}) {
 	const problems = [];
 	const html = fs.readFileSync(docPath, 'utf8');
 	const name = path.basename(docPath);
@@ -76,6 +112,9 @@ export function checkDoc(docPath, { vocab } = {}) {
 	for (const [id, count] of ids) if (count > 1) problems.push(`id "${id}" is used ${count} times`);
 	for (const target of new Set(links)) if (!ids.has(target)) problems.push(`link to #${target}: no element has that id`);
 
+	const themed = resolveTheme({ theme, startDir: path.dirname(path.resolve(docPath)) });
+	const allowed = new Set(Object.values(themeValues(themed)).map(normColor));
+
 	// Figures: an SVG with a <title>, and a caption numbered 1, 2, 3… in order.
 	let expected = 1;
 	figures.forEach((fig, i) => {
@@ -87,6 +126,7 @@ export function checkDoc(docPath, { vocab } = {}) {
 		if (svg) {
 			const t = svg.children.find((c) => c.tag === 'title');
 			if (!t || !textOf(t).trim()) problems.push(`${label}: the <svg> needs a <title> saying what it shows (it is all a model reads of the drawing)`);
+			for (const c of strayColors(svg, themed.tokens, allowed)) problems.push(`${label}: colour ${c} is not in the theme; use var(--accent), var(--ink)… or a value the theme defines`);
 		}
 		const cap = fig.children.find((c) => c.tag === 'figcaption');
 		const capText = cap ? visibleText(cap).replace(/\s+/g, ' ').trim() : '';
@@ -155,14 +195,17 @@ export function checkDoc(docPath, { vocab } = {}) {
 function main(argv) {
 	const vi = argv.indexOf('--vocab');
 	const vocab = vi >= 0 ? argv[vi + 1] : undefined;
-	const files = argv.filter((a, i) => !a.startsWith('--') && !(vi >= 0 && i === vi + 1));
+	const ti = argv.indexOf('--theme');
+	const theme = ti >= 0 ? argv[ti + 1] : undefined;
+	const files = argv.filter((a, i) => !a.startsWith('--') && !(vi >= 0 && i === vi + 1) && !(ti >= 0 && i === ti + 1));
 	if (!files.length) {
-		console.error('usage: node check-doc.mjs <doc.html> [--vocab <vocabulary.json>]');
+		console.error('usage: node check-doc.mjs <doc.html> [--vocab <vocabulary.json>] [--theme <theme.css>]');
 		return 2;
 	}
 	let failed = 0;
 	for (const file of files) {
-		const problems = checkDoc(file, { vocab });
+		let problems;
+		try { problems = checkDoc(file, { vocab, theme }); } catch (e) { problems = [e.message]; }
 		if (problems.length) { failed++; console.log(`${file}:\n  ${problems.join('\n  ')}`); }
 		else console.log(`OK ${file}`);
 	}

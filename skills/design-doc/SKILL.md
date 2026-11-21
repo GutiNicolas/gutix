@@ -80,6 +80,7 @@ or restart the session until both return.
 
 ```bash
 node <skill>/scripts/inline-figures.mjs docs/design/<slug>.html   # pastes <slug>-figs/Dxx.svg into each marker
+node <skill>/scripts/theme.mjs --apply docs/design/<slug>.html    # writes the theme's colours and fonts into the page
 node <skill>/scripts/extract-llm.mjs docs/design/<slug>.html      # writes <slug>.llm.md
 node <skill>/scripts/check-doc.mjs docs/design/<slug>.html        # OK, or every problem
 ```
@@ -88,6 +89,12 @@ node <skill>/scripts/check-doc.mjs docs/design/<slug>.html        # OK, or every
 HTML. The checker covers the routing comment, figures (SVG `<title>`, caption numbering, markers left), table row
 widths, empty sections, duplicate ids, broken `#` links, code languages, template placeholders, the repo
 vocabulary and a stale twin. Fix and re-run until it prints OK.
+
+**Theme.** The page takes its colours and fonts from the first theme found: `--theme <css>`, the nearest
+`.design-doc-theme.css` up to the repo root, the theme of the org profile that matches the repo's `origin`, then the
+built-in one. A theme is one `:root { }` block of the tokens in `template.html` (`--ink`, `--accent`, `--font-sans`…),
+optionally after `@import` or `@font-face`; a missing token is reported by name. Figures use `var(--accent)` and the
+other tokens, never literal colours; `check-doc.mjs` flags a colour the theme does not have and takes the same `--theme`.
 
 Every later change to the doc: edit the HTML, run `extract-llm.mjs`, commit both files together.
 

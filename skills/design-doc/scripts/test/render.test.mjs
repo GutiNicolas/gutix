@@ -121,3 +121,25 @@ test('figuresOf keeps an svg that holds a nested svg whole', () => {
   const [fig] = figuresOf(html);
   assert.match(fig.svg, /<text>after<\/text><\/svg>$/);
 });
+
+test('a figure id cannot steer a PNG out of the output folder, and two figures cannot share one file', { skip }, () => {
+  const root = tmp();
+  const dir = path.join(root, 'docs');
+  fs.mkdirSync(dir);
+  const svg = fs.readFileSync(FIG, 'utf8');
+  const docWith = (...ids) => {
+    const doc = path.join(dir, 'doc.html');
+    fs.writeFileSync(doc, `<!doctype html><html><body>${ids.map((id) => `<figure class="diagram" id="${id}">${svg}</figure>`).join('')}</body></html>`);
+    return doc;
+  };
+  const r = spawnSync('node', [RENDER, docWith('a/../../esc'), '--png'], { encoding: 'utf8' });
+  assert.equal(fs.existsSync(path.join(root, 'esc.png')), false, 'wrote outside the output folder');
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(fs.readdirSync(dir).filter((f) => f.endsWith('.png')).length, 1);
+  assert.equal(fs.readdirSync(root).filter((f) => f !== 'docs').length, 0);
+
+  const clash = spawnSync('node', [RENDER, docWith('a/b', 'a-b'), '--png', '--out', path.join(dir, 'out')], { encoding: 'utf8' });
+  assert.equal(clash.status, 1);
+  assert.match(clash.stderr, /same file/);
+  assert.equal(fs.existsSync(path.join(dir, 'out')), false, 'nothing is written when two figures clash');
+});

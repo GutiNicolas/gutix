@@ -157,8 +157,18 @@ async function main(argv) {
       const size = viewBoxOf(f.svg);
       let file;
       if (isSvg) file = opts.out ?? `${base}.png`;
-      else file = path.join(opts.out ?? path.dirname(input), `${path.basename(base)}-${f.name}.png`);
+      else {
+        const dir = path.resolve(opts.out ?? path.dirname(input));
+        const safe = f.name.replace(/[^\w.-]+/g, '-').replace(/^\.+/, '') || 'fig';
+        file = path.join(dir, `${path.basename(base)}-${safe}.png`);
+        if (path.dirname(file) !== dir) { console.error(`render: figure id "${f.name}" does not make a safe file name`); return 1; }
+      }
       jobs.push({ ...f, size, file });
+    }
+    const seen = new Map();
+    for (const j of jobs) {
+      if (seen.has(j.file)) { console.error(`render: figures "${seen.get(j.file)}" and "${j.name}" would write the same file ${j.file}; give them distinct ids`); return 1; }
+      seen.set(j.file, j.name);
     }
     if (opts.lint) {
       const bad = jobs.flatMap((j) => lintFigure(j.size).map((issue) => `${j.name ?? path.basename(input)}: ${issue}`));

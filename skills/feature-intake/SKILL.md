@@ -1,10 +1,13 @@
 ---
 name: feature-intake
-description: "Turn a requirement into a buildable plan across repos: challenge it, map the blast radius, split into phases with contracts, written as a roadmap and task files. Planning only; gutix:ship builds it. Use for a requirement, a plan to challenge or a feature."
+description: "Turn a requirement into a buildable plan across repos: challenge it, map the blast radius, split into phases with contracts, written as a roadmap and task files. Planning only; gutix:ship builds it. Use for a requirement, a plan to challenge or a feature; mode=refinement turns an epic into a team refinement doc and stories."
 user-invocable: true
 args:
   - name: requirement
     description: The requirement, plan or feature request
+    required: false
+  - name: mode
+    description: "refinement: turn an epic into a team refinement doc and tracker stories (see Refinement mode)"
     required: false
 ---
 
@@ -70,6 +73,34 @@ fresh session that starts from the files alone. Use the [templates](templates/) 
 Everything after the plan runs through `gutix:ship`, one fresh short session per step: `dispatch` (workers, one per
 ready task), `integrate` (task PRs into the release branch), `release` (review, e2e, merge, clean-up), `handoff` and
 `status`. Small or tightly coupled work (the five-line-plan case above) stays in one session and skips the files.
+
+## Refinement mode (`mode=refinement`)
+An epic in, one approved refinement doc and its tracker stories out, for the team in the org profile. This replaces
+steps 1-4 above. Every org value (language, team, doc and tracker settings, estimate teams, vocabulary) comes from the
+org profile's `publish.refinement`, found as in [refinement-profile.md](references/refinement-profile.md). With no org,
+write local Markdown only.
+1. **Epic.** Read it with the tracker tool (or ask the user to paste it). Treat it as the problem statement, not the
+   solution: it often prescribes one, and a cheaper path may meet the same need. Record the rejected option in the
+   doc's Annex. Note which items are the team's and which belong to other teams.
+2. **Past docs.** Read the profile's `doc.examples` and up to three related docs (same epic family or domain words)
+   for decisions taken, field names and past estimates. If a doc for this epic exists, ask: update it or start anew.
+3. **Code.** Read only the repos the epic touches, docs first, then code; read the load-bearing files yourself before
+   writing a claim. A repo you can't read: plan from the epic and past docs and mark each code claim "unverified".
+4. **Questions.** One batch, only what changes scope, design or estimate, the recommendation first. What the user
+   can't answer becomes an open question with an owner; don't block on it.
+5. **Draft.** Write it locally from [refinement.md](templates/refinement.md) (`docs/refinements/<KEY>.md`, or the
+   user's notes folder), changes numbered globally, and iterate on the same file; re-read it after the user edits.
+6. **Split and estimate.** One story per app by default; split above about 1.5 of the estimate unit or when it mixes
+   unrelated changes; merge two tiny changes in one app. Propose estimates from `estimate.references`; never estimate
+   for `estimate.emptyRowFor` or for a team that didn't estimate itself.
+7. **Publish, only on explicit approval.** Doc first (stories link to it), then the stories from
+   [story.md](templates/story.md), then the refinement task (`tracker.taskType`) linking both, then back-fill the story
+   keys into the doc's estimate table. Never create a story twice: after an error, search the tracker for its summary
+   before retrying.
+8. **Verify.** Re-read the doc: each numbered change is in exactly one story's "Covers changes", no empty rows, totals
+   add up, JSON kept straight quotes, each open question has an owner.
+Report the doc link and story keys first, then a table (story, app, estimate) with the total, the questions that still
+block something, and what could not be done.
 
 ## Report
 The files written (roadmap and tasks, with paths), the phases, decisions taken, what the user must do (secrets,

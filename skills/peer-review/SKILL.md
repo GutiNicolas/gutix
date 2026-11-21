@@ -66,7 +66,7 @@ pr-review step 4's rubric. Mark pre-existing problems as such.
 - Pre-existing problems the PR doesn't make worse go to you, not to the PR.
 - Rank by importance; keep ≤ ~10; the rest is "left out" with one line each.
 - **Public repo** (`gh repo view <o>/<r> --json visibility`): check every comment against the global `CLAUDE.md`
-  public-surfaces rule; drop or reword what reveals how the product defends itself.
+  public-surfaces rule; drop or reword what reveals how the product defends itself (detection, thresholds, limits).
 
 ## 5. Write the comments
 In the PR's language. One inline comment per finding, on the diff line that causes it:

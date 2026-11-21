@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.13.0
+
+- New skill `deck`: a self-contained HTML slide deck that explains a technical flow or change, researched fresh from
+  the repo, in the org's theme, exported to PDF with the shared renderer.
+- New skill `ui-evidence`: screenshots of a UI change on mobile and desktop, before and after, with the primary CTA
+  measured, composed into BEFORE | AFTER images for a ticket or PR.
+- `feature-intake` gains `mode=refinement`: an epic becomes a team refinement doc and tracker stories, using the org
+  profile's refinement settings. `task.md` gains a few fields.
+- `verify` compares lint and type diagnostics with the base branch and reports only the new ones.
+- `ship` renames its session first, in every mode.
+
 ## 0.12.0
 
 - Theme: a design doc takes its colours and fonts from `--theme`, the repo's `.design-doc-theme.css`, the linked org

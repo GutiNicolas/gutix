@@ -130,6 +130,10 @@ export function applyTheme(html, theme) {
 
 function main(argv) {
   const arg = (name) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : undefined; };
+  if (argv.includes('--theme') && (arg('--theme') === undefined || arg('--theme').startsWith('--'))) {
+    console.error('theme: --theme needs a file, e.g. --theme brand.css');
+    return 2;
+  }
   try {
     const doc = arg('--apply');
     const theme = resolveTheme({ theme: arg('--theme'), startDir: arg('--from') ?? (doc ? path.dirname(path.resolve(doc)) : process.cwd()) });

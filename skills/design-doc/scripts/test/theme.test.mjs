@@ -1,7 +1,7 @@
 // The theme of a design doc: which file wins, what a broken theme says, and that figure colours stay inside it.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -117,4 +117,16 @@ test('check-doc judges colours against the theme that applies to the doc', () =>
   const themed = figureDoc('<rect fill="#0a0a0a"/><rect fill="#1f5fbf"/>', { theme: css('#0a0a0a') });
   assert.match(colourProblems(themed).join('\n'), /colour #1f5fbf/);
   assert.doesNotMatch(colourProblems(themed).join('\n'), /#0a0a0a/);
+});
+
+test('theme CLI: --theme without a value, or followed by another flag, is a usage error', () => {
+  const dir = tmp();
+  const doc = path.join(dir, 'doc.html');
+  fs.writeFileSync(doc, fs.readFileSync(TEMPLATE, 'utf8'));
+  const THEME_CLI = path.join(here, '..', 'theme.mjs');
+  for (const args of [['--theme', '--apply', doc], ['--apply', doc, '--theme']]) {
+    const r = spawnSync('node', [THEME_CLI, ...args], { encoding: 'utf8', cwd: dir });
+    assert.equal(r.status, 2, args.join(' '));
+    assert.match(r.stderr, /--theme needs a file/);
+  }
 });

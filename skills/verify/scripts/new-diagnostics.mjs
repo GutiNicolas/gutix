@@ -12,7 +12,7 @@ const rootSpellings = (root) => {
 	if (!root) return [];
 	const spellings = [root.replace(/\/$/, '')];
 	try { spellings.push(fs.realpathSync(root)); } catch { /* the root may not exist any more */ }
-	return [...new Set(spellings)];
+	return [...new Set(spellings)].sort((a, b) => b.length - a.length); // longest first: /var/x is inside /private/var/x
 };
 
 const keyed = (text, root) => {

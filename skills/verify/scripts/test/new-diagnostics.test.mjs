@@ -77,3 +77,14 @@ test('stylish file headers with a space in the path keep their diagnostics per f
 	assert.equal(fresh.length, 1);
 	assert.match(fresh[0], /b\.js/);
 });
+
+test('a root whose real path contains it (macOS /var inside /private/var) strips to the same relative path', () => {
+	const base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'nd-nest-')));
+	const given = `${base}/wt`;
+	const real = `${base}/private${base}/wt`; // contains the given spelling, like /private/var/... contains /var/...
+	fs.mkdirSync(real, { recursive: true });
+	fs.symlinkSync(real, given);
+	const before = `${real}/src/a.js\n  1:1  error  x  no-undef\n`;
+	const after = `src/a.js\n  4:1  error  x  no-undef\n`;
+	assert.equal(newDiagnostics(before, after, { before: given }).length, 0);
+});

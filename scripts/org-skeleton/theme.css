@@ -1,0 +1,25 @@
+/* Theme for design docs and decks written in repos that belong to this org.
+   Change the values; keep every variable name. */
+:root {
+  --ink: #1c2330;
+  --muted: #5b6676;
+  --line: #d9dee6;
+  --soft: #f4f6f9;
+  --accent: #1f5fbf;
+  --accent-soft: #e8f0fc;
+  --warn: #9a5b00;
+  --warn-soft: #fff4de;
+  --ok: #1d6b3a;
+  --ok-soft: #e6f4ea;
+  --bad: #c0392b;
+  --bad-soft: #fdecea;
+  --font-sans: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* Optional, for decks. Each falls back as noted if you delete it.
+  --paper: #ffffff;
+  --off: #f4f6f9;
+  --accent-on-dark: #1f5fbf;
+  --accent-fill: #1f5fbf;
+  --accent-dark: #1c2330;
+  */
+}

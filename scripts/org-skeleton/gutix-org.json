@@ -1,0 +1,6 @@
+{
+  "name": "{{name}}",
+  "match": ["github.com/<owner>/"],
+  "language": "en",
+  "theme": "theme.css"
+}

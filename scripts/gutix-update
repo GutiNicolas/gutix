@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Pull gutix and every linked org, then regenerate the Cursor copies. `--daily` runs at most once a day.
+set -euo pipefail
+src="$0"
+while [ -h "$src" ]; do
+  dir="$(cd -P "$(dirname "$src")" && pwd)"
+  src="$(readlink "$src")"
+  case "$src" in /*) ;; *) src="$dir/$src" ;; esac
+done
+here="$(cd -P "$(dirname "$src")" && pwd)"
+exec node "$here/gutix.mjs" update "$@"

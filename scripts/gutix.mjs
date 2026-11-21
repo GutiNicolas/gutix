@@ -261,7 +261,9 @@ function readConfig() {
 }
 
 function git(args, { cwd, timeout = 120000 } = {}) {
-  const r = spawnSync('git', args, { cwd, encoding: 'utf8', timeout, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } });
+  const r = spawnSync('git', args, { cwd, encoding: 'utf8', timeout, stdio: ['ignore', 'pipe', 'pipe'],
+    // Never prompt: not for HTTPS credentials, and not for an ssh passphrase (it would block on /dev/tty).
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: process.env.GIT_SSH_COMMAND || 'ssh -o BatchMode=yes' } });
   const err = (r.error ? r.error.message : r.stderr || '').trim().split('\n').filter(Boolean).slice(-2).join(' ');
   return { ok: r.status === 0, out: (r.stdout || '').trim(), err };
 }
@@ -322,6 +324,10 @@ function update({ daily = false, ifOptedIn = false } = {}) {
   try {
     if (ifOptedIn && readConfig().autoUpdate !== 'daily') return;
     if (daily && exists(stampFile()) && fs.readFileSync(stampFile(), 'utf8').trim() === today()) return;
+    // Claim the day before any pull: the hook is killed after 60 s, and a run that never reached the end must not
+    // make every later session start wait again. A failed pull counts as done for the day.
+    fs.mkdirSync(cfgDir(), { recursive: true });
+    if (daily) fs.writeFileSync(stampFile(), `${today()}\n`);
 
     const targets = [{ name: 'gutix', dir: gutixRoot() }];
     try { for (const o of readRegistry().orgs) targets.push({ name: o.name, dir: o.path }); } catch (e) { warn(e.message); }
@@ -337,8 +343,6 @@ function update({ daily = false, ifOptedIn = false } = {}) {
         if (manifest && exists(manifest)) installCursorCopy({ folder: t.dir, prefix: readJson(manifest).prefix, quiet: daily });
       } catch (e) { warn(`${t.name}: ${e.message}`); }
     }
-    fs.mkdirSync(cfgDir(), { recursive: true });
-    if (daily) fs.writeFileSync(stampFile(), `${today()}\n`);
   } catch (e) { warn(`update: ${e.message}`); }
 }
 

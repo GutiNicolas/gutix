@@ -234,3 +234,34 @@ test('the SessionStart hook does nothing without opt-in, and runs the daily upda
   assert.equal(on.stdout, '');
   assert.ok(exists(stamp(home)) && exists(path.join(g.checkout, 'skills/one/SKILL.md')));
 });
+
+// A `git` on PATH that records what it sees when update calls it, then fails like an unreachable remote.
+function fakeGit(home) {
+  const bin = tmp();
+  const log = path.join(bin, 'calls.log');
+  write(path.join(bin, 'git'), `#!/bin/sh\nif [ -e "$HOME/.config/gutix/last-update" ]; then s=stamped; else s=unstamped; fi\necho "$s|\${GIT_SSH_COMMAND}|\${GIT_TERMINAL_PROMPT}" >> "${log}"\nexit 1\n`);
+  fs.chmodSync(path.join(bin, 'git'), 0o755);
+  return { env: { PATH: `${bin}${path.delimiter}${process.env.PATH}` }, calls: () => (exists(log) ? read(log).trim().split('\n') : []) };
+}
+
+test('a daily run claims today before it pulls, so a run killed mid-pull is not retried at every session start', () => {
+  const home = tmp();
+  const g = gutixFixture();
+  const fake = fakeGit(home);
+  const r = gutix(home, ['update', '--daily'], { ...fake.env, GUTIX_ROOT: g.checkout });
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(fake.calls().length >= 1, 'git was called');
+  for (const c of fake.calls()) assert.match(c, /^stamped\|/, 'the stamp existed before the first pull');
+  assert.match(read(path.join(home, '.config/gutix/last-update')), /^\d{4}-\d{2}-\d{2}\n$/, 'a failed pull still counts as done for the day');
+});
+
+test('update never lets ssh ask for a passphrase, but keeps an ssh command the user set', () => {
+  const home = tmp();
+  const g = gutixFixture();
+  const fake = fakeGit(home);
+  gutix(home, ['update'], { ...fake.env, GUTIX_ROOT: g.checkout, GIT_SSH_COMMAND: '' });
+  assert.match(fake.calls()[0], /\|ssh -o BatchMode=yes\|/);
+  const mine = gutix(home, ['update'], { ...fake.env, GUTIX_ROOT: g.checkout, GIT_SSH_COMMAND: 'ssh -i /k' });
+  assert.equal(mine.status, 0);
+  assert.match(fake.calls().at(-1), /\|ssh -i \/k\|/);
+});

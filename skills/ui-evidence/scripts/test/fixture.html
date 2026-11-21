@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>tour fixture</title>
+	<style>
+		html, body { margin: 0; padding: 0; }
+		h1 { margin: 0; height: 40px; font: 700 24px/40px system-ui; }
+		button { position: absolute; left: 16px; height: 40px; width: 200px; }
+		#scroller { position: absolute; top: 60px; left: 16px; height: 100px; width: 200px; overflow-y: auto; }
+		#scroller div { height: 250px; }
+	</style>
+</head>
+<body>
+	<h1 id="title">Step 1</h1>
+	<script>
+		// Path ends with a case id: cta-<top>, cta-<top>-scroll, cta-<top>-steps, or none.
+		const id = location.pathname.split('/').pop();
+		const match = /^cta-(\d+)(-scroll|-steps)?$/.exec(id);
+		if (match) {
+			const button = document.createElement('button');
+			button.textContent = 'Continue';
+			button.style.top = `${match[1]}px`;
+			document.body.appendChild(button);
+			if (match[2] === '-scroll') {
+				const scroller = document.createElement('div');
+				scroller.id = 'scroller';
+				scroller.innerHTML = '<div></div>';
+				document.body.appendChild(scroller);
+			}
+			if (match[2] === '-steps') {
+				button.addEventListener('click', () => {
+					document.getElementById('title').textContent = 'Step 2';
+					button.style.top = '600px';
+				});
+			}
+		}
+	</script>
+</body>
+</html>

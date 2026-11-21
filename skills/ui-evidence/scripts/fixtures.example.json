@@ -1,0 +1,14 @@
+{
+  "routes": [
+    {
+      "match": "/api/orders/demo-1$",
+      "body": { "id": "demo-1", "status": "pending", "items": [{ "name": "Sample item", "price": 10 }] }
+    },
+    {
+      "match": "/api/orders$",
+      "method": "POST",
+      "status": 201,
+      "body": { "id": "demo-2", "status": "created" }
+    }
+  ]
+}

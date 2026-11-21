@@ -15,6 +15,7 @@ Claude Code plugin with Nicolas' engineering workflows.
 | `gutix:live-data-change` | Changes data in a live PostgreSQL without blocking it: generated dry-run and apply files, index-only access proven by a plan test, batches with commits, lock and statement timeouts, `ON_ERROR_STOP` for pipelines, verification queries; and the delta + recomputed-projection design that keeps such changes cheap. |
 | `gutix:learn` | Turns mistakes that repeat into safeguards that run (test, lint rule, review invariant, recipe line), prunes stale instructions; persists only with evidence and the user's yes. |
 | `gutix:design-doc` | Writes a design doc from decisions already taken: an HTML for people (browser, PDF) with inline SVG diagrams and a generated `<name>.llm.md` twin that agents read at about a third of the tokens. Writer and diagram subagents, a contradictions review against the code, a checker (`check-doc.mjs`), and routing (first-line pointer, `AGENTS.md` line, `extract-llm.mjs --check`). |
+| `gutix:ui-evidence` | Proves a UI change with screenshots: tours the screens on mobile and desktop before and after, measures the primary CTA, and composes BEFORE \| AFTER images to attach to a ticket or PR. |
 
 ## Install
 

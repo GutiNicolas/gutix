@@ -103,3 +103,15 @@ test('an html doc gives one PNG per diagram figure; --pdf prints the page', { sk
   execFileSync('node', [RENDER, doc, '--pdf'], { encoding: 'utf8' });
   assert.equal(fs.readFileSync(path.join(dir, 'doc.pdf')).subarray(0, 4).toString(), '%PDF');
 });
+
+test('a broken theme is a setup error (exit 2), not a failed render (exit 1)', () => {
+  const dir = tmp();
+  const bad = path.join(dir, 'bad.css');
+  fs.writeFileSync(bad, ':root{--ink:#111}');
+  const fakeChrome = stub(dir, 'fake-chrome'); // reaches the theme step without a real browser
+  const r = spawnSync('node', [RENDER, FIG, '--png', '--theme', bad], { encoding: 'utf8', env: { ...process.env, CHROME_PATH: fakeChrome } });
+  assert.equal(r.status, 2, r.stderr);
+  assert.match(r.stderr, /theme|--accent|missing/i);
+  const missing = spawnSync('node', [RENDER, FIG, '--png', '--theme', path.join(dir, 'nope.css')], { encoding: 'utf8', env: { ...process.env, CHROME_PATH: fakeChrome } });
+  assert.equal(missing.status, 2, missing.stderr);
+});

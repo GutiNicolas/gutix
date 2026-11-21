@@ -129,8 +129,11 @@ async function main(argv) {
   const input = path.resolve(opts.input);
   const isSvg = /\.svg$/i.test(input);
   if (!isSvg && !/\.html?$/i.test(input)) usage('the input is a .svg or a .html');
-  const source = fs.readFileSync(input, 'utf8');
-  const theme = resolveTheme({ theme: opts.theme, startDir: path.dirname(input) });
+  let source, theme;
+  try {
+    source = fs.readFileSync(input, 'utf8');
+    theme = resolveTheme({ theme: opts.theme, startDir: path.dirname(input) });
+  } catch (e) { console.error(`render: ${e.message}`); return 2; }
   const base = input.replace(/\.[^.]+$/, '');
 
   const jobs = [];
@@ -151,7 +154,8 @@ async function main(argv) {
   }
 
   const { chromium } = loadPlaywright();
-  const browser = await chromium.launch({ executablePath: chrome });
+  let browser;
+  try { browser = await chromium.launch({ executablePath: chrome }); } catch (e) { console.error(`render: Chrome did not start: ${e.message.split('\n')[0]}`); return 2; }
   let failed = 0;
   try {
     if (opts.format === 'pdf') {

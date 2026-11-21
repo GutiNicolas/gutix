@@ -72,11 +72,12 @@ function svgOf(text) {
 /** The figures of a design doc: each <figure class="diagram"> with an <svg>, named by its id (or its position). */
 export function figuresOf(html) {
   const out = [];
+  html = html.replace(/<!--[\s\S]*?-->/g, '');
   for (const m of html.matchAll(/<figure\b([^>]*)>([\s\S]*?)<\/figure>/gi)) {
     if (!/\bclass\s*=\s*["'][^"']*\bdiagram\b/.test(m[1])) continue;
     const svg = svgOf(m[2]);
-    if (!svg) continue;
     const id = /\bid\s*=\s*["']([^"']+)["']/.exec(m[1])?.[1];
+    if (!svg) { console.error(`render: skipped a diagram figure with no complete <svg>${id ? ` (id "${id}")` : ''}`); continue; }
     out.push({ name: id ?? `fig-${out.length + 1}`, svg });
   }
   return out;
@@ -150,7 +151,7 @@ async function main(argv) {
   const opts = parseArgs(argv);
   const chrome = findChrome();
   if (opts.findChrome) {
-    if (!chrome) { console.error('render: Chrome not found; set CHROME_PATH or install google-chrome / chromium'); return 1; }
+    if (!chrome) { console.error('render: Chrome not found; set CHROME_PATH or install google-chrome / chromium'); return 2; }
     console.log(chrome);
     return 0;
   }
@@ -207,7 +208,11 @@ async function main(argv) {
       // The doc is set as content, never opened from disk, so it cannot read files next to it (no relative images).
       await page.setContent(!isSvg && opts.theme ? html.replace(/<\/head>/i, `<style>${theme.preamble ?? ''}\n${theme.root}</style></head>`) : html, { waitUntil: 'load', timeout: TIMEOUTS.load });
       await page.evaluate((ms) => Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, ms))]), TIMEOUTS.fonts);
-      await page.pdf({ path: file, printBackground: true, preferCSSPageSize: true, timeout: TIMEOUTS.pdf });
+      // page.pdf has no timeout option of its own, so it is raced against a timer.
+      const pdfMs = Number(process.env.GUTIX_PDF_TIMEOUT_MS) || TIMEOUTS.pdf;
+      let timer;
+      const expired = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`the PDF did not finish in ${pdfMs / 1000}s`)), pdfMs); });
+      try { await Promise.race([page.pdf({ path: file, printBackground: true, preferCSSPageSize: true }), expired]); } finally { clearTimeout(timer); }
       console.log(`wrote ${file}`);
     } else {
       for (const job of jobs) {

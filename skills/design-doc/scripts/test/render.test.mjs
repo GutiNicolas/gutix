@@ -186,3 +186,32 @@ test('setup reinstalls playwright-core when the cached version is not the pinned
   assert.equal(spawnSync('bash', [setup], { env, encoding: 'utf8' }).status, 0);
   assert.equal(fs.existsSync(log), false, 'the pinned version is already there: no install');
 });
+
+test('figuresOf ignores svg tags inside HTML comments and names a diagram figure it skips', () => {
+  const html = '<figure class="diagram" id="c"><!-- <svg old --><svg viewBox="0 0 500 200"><rect/></svg></figure>' +
+    '<figure class="diagram" id="empty"><p>none</p></figure>';
+  const warned = [];
+  const real = console.error;
+  console.error = (m) => warned.push(String(m));
+  try {
+    const figs = figuresOf(html);
+    assert.deepEqual(figs.map((f) => f.name), ['c']);
+    assert.match(figs[0].svg, /^<svg viewBox="0 0 500 200"><rect\/><\/svg>$/);
+  } finally { console.error = real; }
+  assert.match(warned.join(), /empty/);
+});
+
+test('--find-chrome exits 2 when there is no Chrome, like every other setup error', () => {
+  const dir = tmp();
+  const r = spawnSync(process.execPath, [RENDER, '--find-chrome'], { encoding: 'utf8', env: { PATH: dir, HOME: dir, CHROME_PATH: path.join(dir, 'nope') } });
+  assert.equal(r.status, 2, r.stderr);
+});
+
+test('a PDF that does not finish in time stops with an error', { skip }, () => {
+  const dir = tmp();
+  const doc = path.join(dir, 'doc.html');
+  fs.writeFileSync(doc, '<!doctype html><html><body><p>x</p></body></html>');
+  const r = spawnSync('node', [RENDER, doc, '--pdf'], { encoding: 'utf8', env: { ...process.env, GUTIX_PDF_TIMEOUT_MS: '1' } });
+  assert.notEqual(r.status, 0, 'the PDF timeout was ignored');
+  assert.match(r.stderr, /PDF .*did not finish/);
+});

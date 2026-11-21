@@ -12,7 +12,7 @@
   chain (`pbcopy`, `wl-copy`, `xclip`, or copy the file) instead of macOS only.
 - Export hardening: figure ids become safe file names (two figures cannot write the same file), docs render with
   JavaScript off and the network closed (fonts still load), a figure with a nested svg is exported whole, timeouts
-  everywhere, `playwright-core` pinned, and setup or theme errors exit 2.
+  on Chrome launch, page load, screenshots, the PDF and the npm fetch, `playwright-core` pinned, and setup or theme errors exit 2.
 
 ## 0.11.0
 

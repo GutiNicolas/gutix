@@ -167,3 +167,25 @@ test('gutix itself: every skill but the Claude-only ones as gutix-<x>, same vers
   const tests = spawnSync('node', ['--test', path.join(t, 'skills/gutix-design-doc/scripts/test/design-doc.test.mjs')], { encoding: 'utf8', env: { ...process.env, HOME: home } });
   assert.equal(tests.status, 0, tests.stdout.slice(-1500));
 });
+
+test('a regeneration that fails partway leaves the earlier copy intact, and the next good run recovers', () => {
+  const plugin = fixturePlugin();
+  const home = tmp();
+  assert.equal(run(home, [plugin, '--prefix', 'acme-']).status, 0);
+  const t = targetOf(home);
+  const before = treeHash(t);
+
+  // A dangling symlink cannot be copied (portable on macOS and Linux), and `beta` is built after `alpha`.
+  fs.symlinkSync(path.join(plugin, 'nowhere'), path.join(plugin, 'skills/beta/broken'));
+  const failed = run(home, [plugin, '--prefix', 'acme-']);
+  assert.equal(failed.status, 1);
+  assert.equal(treeHash(t), before, 'the old copy is untouched');
+  assert.match(read(path.join(t, 'skills/acme-alpha/SKILL.md')), /^---\nname: acme-alpha\n/);
+  assert.deepEqual(fs.readdirSync(path.dirname(t)), ['acme'], 'no staging folder left behind');
+
+  fs.rmSync(path.join(plugin, 'skills/beta/broken'));
+  write(path.join(plugin, 'skills/gamma/SKILL.md'), '---\nname: gamma\ndescription: Gamma\n---\n');
+  assert.equal(run(home, [plugin, '--prefix', 'acme-']).status, 0);
+  assert.ok(exists(path.join(t, 'skills/acme-gamma/SKILL.md')));
+  assert.deepEqual(fs.readdirSync(path.dirname(t)), ['acme']);
+});

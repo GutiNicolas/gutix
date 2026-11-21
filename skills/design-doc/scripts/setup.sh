@@ -19,7 +19,7 @@ for package in "${PACKAGES[@]}"; do
 done
 
 if [ ${#missing[@]} -gt 0 ]; then
-	PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install --no-audit --no-fund --loglevel=error "${missing[@]}"
+	PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install --fetch-timeout=60000 --fetch-retries=1 --no-audit --no-fund --loglevel=error "${missing[@]}"
 	echo "setup: installed ${missing[*]} in $DEPS"
 else
 	echo "setup: dependencies already in $DEPS"

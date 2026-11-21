@@ -17,6 +17,8 @@ import { resolveTheme } from './theme.mjs';
 const SCRIPTS = path.dirname(fileURLToPath(import.meta.url));
 export const MAC_APP = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 export const PATH_NAMES = ['google-chrome', 'chromium', 'chromium-browser'];
+// Nothing waits forever: a hung Chrome or a slow font stops the run with an error.
+export const TIMEOUTS = { launch: 30_000, load: 30_000, fonts: 5_000, shot: 30_000, pdf: 60_000 };
 export const LIMITS = { minWidth: 400, minHeight: 120, maxAspect: 4 };
 
 const isExecutable = (file) => {
@@ -194,7 +196,7 @@ async function main(argv) {
 
   const { chromium } = loadPlaywright();
   let browser;
-  try { browser = await chromium.launch({ executablePath: chrome }); } catch (e) { console.error(`render: Chrome did not start: ${e.message.split('\n')[0]}`); return 2; }
+  try { browser = await chromium.launch({ executablePath: chrome, timeout: TIMEOUTS.launch }); } catch (e) { console.error(`render: Chrome did not start: ${e.message.split('\n')[0]}`); return 2; }
   let failed = 0;
   try {
     if (opts.format === 'pdf') {
@@ -203,18 +205,18 @@ async function main(argv) {
       // An svg alone is printed on a page of its own; a doc keeps its own print CSS (and its own theme, unless --theme).
       const html = isSvg ? pageOf(theme, source.replace(/^﻿?\s*<\?xml[^>]*\?>\s*/, ''), null) : source;
       // The doc is set as content, never opened from disk, so it cannot read files next to it (no relative images).
-      await page.setContent(!isSvg && opts.theme ? html.replace(/<\/head>/i, `<style>${theme.preamble ?? ''}\n${theme.root}</style></head>`) : html, { waitUntil: 'load' });
-      await page.evaluate(() => document.fonts.ready);
-      await page.pdf({ path: file, printBackground: true, preferCSSPageSize: true });
+      await page.setContent(!isSvg && opts.theme ? html.replace(/<\/head>/i, `<style>${theme.preamble ?? ''}\n${theme.root}</style></head>`) : html, { waitUntil: 'load', timeout: TIMEOUTS.load });
+      await page.evaluate((ms) => Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, ms))]), TIMEOUTS.fonts);
+      await page.pdf({ path: file, printBackground: true, preferCSSPageSize: true, timeout: TIMEOUTS.pdf });
       console.log(`wrote ${file}`);
     } else {
       for (const job of jobs) {
         const page = await sandboxedPage(browser, { deviceScaleFactor: opts.scale, viewport: { width: Math.max(1, Math.ceil(job.size.width)), height: Math.max(1, Math.ceil(job.size.height)) } });
         try {
-          await page.setContent(pageOf(theme, job.svg, job.size), { waitUntil: 'load' });
-          await page.evaluate(() => Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 5000))]));
+          await page.setContent(pageOf(theme, job.svg, job.size), { waitUntil: 'load', timeout: TIMEOUTS.load });
+          await page.evaluate((ms) => Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, ms))]), TIMEOUTS.fonts);
           fs.mkdirSync(path.dirname(job.file), { recursive: true });
-          await page.locator('body > svg').screenshot({ path: job.file });
+          await page.locator('body > svg').screenshot({ path: job.file, timeout: TIMEOUTS.shot });
           console.log(`wrote ${job.file} (${Math.round(job.size.width * opts.scale)}x${Math.round(job.size.height * opts.scale)})`);
         } catch (e) {
           failed++;

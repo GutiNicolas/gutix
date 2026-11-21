@@ -343,6 +343,22 @@ function newOrg(name) {
 
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
+// Atomic check-and-write for the daily run: whichever session creates today's claim file first does the update, the
+// others (two sessions starting at once) skip it. Claims of earlier days are removed. Never throws, never waits.
+function claimToday() {
+  const prefix = 'last-update.claim-';
+  const mine = `${prefix}${today()}`;
+  try {
+    for (const f of fs.readdirSync(cfgDir())) if (f.startsWith(prefix) && f !== mine) fs.rmSync(path.join(cfgDir(), f), { force: true });
+    fs.closeSync(fs.openSync(path.join(cfgDir(), mine), 'wx'));
+  } catch (e) {
+    if (e.code === 'EEXIST') return false;
+    warn(`update: could not record the daily claim (${e.message})`); // carry on: better a repeat than a skipped update
+  }
+  try { fs.writeFileSync(stampFile(), `${today()}\n`); } catch (e) { warn(`update: ${e.message}`); }
+  return true;
+}
+
 // Pulls gutix and every linked org, then regenerates the Cursor copies that exist. Never throws: a session must not fail.
 function update({ daily = false, ifOptedIn = false } = {}) {
   const say = daily ? () => {} : note; // daily runs print nothing on stdout: a SessionStart hook's stdout becomes context
@@ -352,8 +368,7 @@ function update({ daily = false, ifOptedIn = false } = {}) {
     // Claim the day before any pull: the hook is killed after 60 s, and a run that never reached the end must not
     // make every later session start wait again. A failed pull counts as done for the day.
     fs.mkdirSync(cfgDir(), { recursive: true });
-    if (daily) fs.writeFileSync(stampFile(), `${today()}\n`);
-
+    if (daily && !claimToday()) return;
     const targets = [{ name: 'gutix', dir: gutixRoot() }];
     try { for (const o of readRegistry().orgs) targets.push({ name: o.name, dir: o.path }); } catch (e) { warn(e.message); }
     for (const t of targets) {

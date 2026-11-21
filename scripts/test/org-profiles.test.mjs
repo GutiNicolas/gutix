@@ -2,7 +2,7 @@
 // and local bare git repos standing in for the org (and for gutix itself).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync, execFileSync } from 'node:child_process';
+import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -209,7 +209,9 @@ test('update --daily is quiet and a no-op the second time on the same day', () =
   push(g, 'skills/two/SKILL.md', skill('two'));
   assert.equal(gutix(home, ['update', '--daily'], env).status, 0);
   assert.ok(!exists(path.join(g.checkout, 'skills/two')), 'second run the same day did nothing');
+  // Pretend it is the next day: yesterday's stamp, and no claim for today.
   fs.writeFileSync(path.join(home, '.config/gutix/last-update'), '2000-01-01\n');
+  for (const f of fs.readdirSync(path.join(home, '.config/gutix'))) if (f.startsWith('last-update.claim-')) fs.rmSync(path.join(home, '.config/gutix', f));
   gutix(home, ['update', '--daily'], env);
   assert.ok(exists(path.join(g.checkout, 'skills/two/SKILL.md')), 'a stale stamp runs again');
 });
@@ -264,4 +266,18 @@ test('update never lets ssh ask for a passphrase, but keeps an ssh command the u
   const mine = gutix(home, ['update'], { ...fake.env, GUTIX_ROOT: g.checkout, GIT_SSH_COMMAND: 'ssh -i /k' });
   assert.equal(mine.status, 0);
   assert.match(fake.calls().at(-1), /\|ssh -i \/k\|/);
+});
+
+test('session starts that race on the daily update: only one of them pulls', async () => {
+  const home = tmp();
+  const g = gutixFixture();
+  const fake = fakeGit(home);
+  const env = { ...process.env, HOME: home, ...fake.env, GUTIX_ROOT: g.checkout };
+  const runs = Array.from({ length: 8 }, () => new Promise((resolve) => {
+    const child = spawn('node', [cli, 'update', '--daily'], { env, stdio: 'ignore' });
+    child.on('exit', resolve);
+  }));
+  const codes = await Promise.all(runs);
+  assert.deepEqual(codes, Array(8).fill(0), 'no session fails');
+  assert.equal(fake.calls().length, 1, 'one pull for the whole day');
 });

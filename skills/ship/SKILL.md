@@ -21,8 +21,8 @@ the result into those files, and ends. It never waits on or follows other sessio
 sessions writing the same files. Keep tool output small (CLAUDE.md "Context budget").
 
 ## Common
-- **Session title, first:** once the roadmap says which tasks this mode touches, rename this session (the host's
-  session-rename tool on itself, e.g. `set_session_title` with `self`; skip if the host has none) to
+- **Session title, first:** once the roadmap says which tasks this mode touches, rename this session (with the
+  host's session-rename tool, on this session; skip if the host has none) to
   `<Mode> <slug> p<n>: <tasks>`, e.g. `Dispatch gutix-unify-skills p2: T-05`. A session typed in by hand otherwise
   keeps the host's title from the command line. Sessions this mode starts get a title too: `T-<nn> <task title>`.
 - **Roadmap:** `docs/features/<slug>/ROADMAP.md` (or the repo's plan folder). Read Decisions, Contracts, the phase's

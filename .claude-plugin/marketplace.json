@@ -11,7 +11,7 @@
     {
       "name": "gutix",
       "source": "./",
-      "description": "Nicolas' engineering workflows: triage, feature intake, ship (dispatch, integrate, release, handoff), bug fix (test first), PR review, peer review of teammates' PRs, sign-off, verify, learn and design docs.",
+      "description": "Nicolas' engineering workflows: triage, feature intake, ship (dispatch, integrate, release, handoff), bug fix (test first), PR review, peer review of teammates' PRs, sign-off, verify, learn, design docs, slide decks and UI evidence.",
       "version": "0.13.0"
     }
   ]

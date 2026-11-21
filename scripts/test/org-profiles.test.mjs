@@ -281,3 +281,25 @@ test('session starts that race on the daily update: only one of them pulls', asy
   assert.deepEqual(codes, Array(8).fill(0), 'no session fails');
   assert.equal(fake.calls().length, 1, 'one pull for the whole day');
 });
+
+test('link-org refused by a foreign Cursor folder records nothing, and retrying with --replace-port links it once', () => {
+  const home = tmp();
+  const org = bareRepo(orgFiles());
+  const foreign = path.join(home, '.cursor/plugins/local/acme');
+  write(path.join(foreign, 'hand-made.txt'), 'mine');
+
+  const refused = gutix(home, ['link-org', org.url]);
+  assert.equal(refused.status, 1);
+  assert.match(refused.stderr, /--replace-port/);
+  assert.ok(!exists(path.join(home, '.config/gutix/orgs.json')), 'nothing recorded');
+  assert.ok(!exists(path.join(home, '.config/gutix/orgs/acme')), 'no clone left behind');
+  assert.equal(read(path.join(foreign, 'hand-made.txt')), 'mine');
+
+  const retry = gutix(home, ['link-org', org.url, '--replace-port']);
+  assert.equal(retry.status, 0, retry.stderr);
+  assert.deepEqual(registry(home).orgs.map((o) => o.name), ['acme']);
+  assert.ok(exists(path.join(foreign, 'skills/acme-gamma/SKILL.md')));
+  assert.ok(!exists(path.join(foreign, 'hand-made.txt')));
+  const backups = path.join(home, '.cache/gutix/cursor-backups');
+  assert.equal(read(path.join(backups, fs.readdirSync(backups)[0], 'hand-made.txt')), 'mine');
+});

@@ -1,7 +1,9 @@
 // The figure renderer: Chrome lookup, the size lint, and (where Chrome and the deps exist) real PNG and PDF output.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFile, execFileSync, spawnSync } from 'node:child_process';
+import http from 'node:http';
+import { promisify } from 'node:util';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -142,4 +144,22 @@ test('a figure id cannot steer a PNG out of the output folder, and two figures c
   assert.equal(clash.status, 1);
   assert.match(clash.stderr, /same file/);
   assert.equal(fs.existsSync(path.join(dir, 'out')), false, 'nothing is written when two figures clash');
+});
+
+test('a doc cannot run scripts or reach the network while it is rendered', { skip }, async () => {
+  const hits = [];
+  const server = http.createServer((req, res) => { hits.push(req.url); res.end(''); });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const run = promisify(execFile);
+  const dir = tmp();
+  try {
+    const svg = fs.readFileSync(FIG, 'utf8').replace('</svg>', `<script>document.querySelector('svg').style.width='100px'</script><image href="${origin}/svg-image"/></svg>`);
+    const doc = path.join(dir, 'doc.html');
+    fs.writeFileSync(doc, `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${origin}/css"></head><body><img src="${origin}/img"><figure class="diagram" id="f">${svg}</figure></body></html>`);
+    await run('node', [RENDER, doc, '--png'], { encoding: 'utf8' });
+    await run('node', [RENDER, doc, '--pdf'], { encoding: 'utf8' });
+    assert.equal(pngWidth(path.join(dir, 'doc-f.png')), 1280, 'the script ran and resized the figure');
+    assert.deepEqual(hits, []);
+  } finally { server.close(); }
 });

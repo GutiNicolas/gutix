@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { resolveTheme } from './theme.mjs';
 
 const SCRIPTS = path.dirname(fileURLToPath(import.meta.url));
@@ -86,6 +86,22 @@ html,body{margin:0;padding:0}
 body{background:var(--paper,#fff);color:var(--ink);font-family:var(--font-sans)}
 ${svgSize ? `body>svg{display:block;width:${svgSize.width}px;height:${svgSize.height}px}` : ''}
 </style></head><body>${body}</body></html>`;
+
+/**
+ * A page that renders untrusted markup: JavaScript off, and only inline data, fonts and https stylesheets (a theme's
+ * @import of a font css) may load. Images, scripts, frames and everything else on the network are refused.
+ */
+export async function sandboxedPage(browser, options = {}) {
+  const context = await browser.newContext({ ...options, javaScriptEnabled: false });
+  await context.route('**/*', (route) => {
+    const request = route.request();
+    const url = request.url();
+    const type = request.resourceType();
+    const ok = /^(data|about|blob):/i.test(url) || type === 'font' || (type === 'stylesheet' && /^https:/i.test(url));
+    return ok ? route.continue() : route.abort();
+  });
+  return context.newPage();
+}
 
 function usage(message) {
   if (message) console.error(`render: ${message}`);
@@ -183,22 +199,17 @@ async function main(argv) {
   try {
     if (opts.format === 'pdf') {
       const file = opts.out ?? `${base}.pdf`;
-      const page = await browser.newPage();
+      const page = await sandboxedPage(browser);
       // An svg alone is printed on a page of its own; a doc keeps its own print CSS (and its own theme, unless --theme).
       const html = isSvg ? pageOf(theme, source.replace(/^﻿?\s*<\?xml[^>]*\?>\s*/, ''), null) : source;
-      const tmp = isSvg ? null : path.join(path.dirname(input), `.render-${process.pid}.html`);
-      try {
-        if (tmp) {
-          fs.writeFileSync(tmp, opts.theme ? html.replace(/<\/head>/i, `<style>${theme.preamble ?? ''}\n${theme.root}</style></head>`) : html);
-          await page.goto(pathToFileURL(tmp).href, { waitUntil: 'load' });
-        } else await page.setContent(html, { waitUntil: 'load' });
-        await page.evaluate(() => document.fonts.ready);
-        await page.pdf({ path: file, printBackground: true, preferCSSPageSize: true });
-      } finally { if (tmp) fs.rmSync(tmp, { force: true }); }
+      // The doc is set as content, never opened from disk, so it cannot read files next to it (no relative images).
+      await page.setContent(!isSvg && opts.theme ? html.replace(/<\/head>/i, `<style>${theme.preamble ?? ''}\n${theme.root}</style></head>`) : html, { waitUntil: 'load' });
+      await page.evaluate(() => document.fonts.ready);
+      await page.pdf({ path: file, printBackground: true, preferCSSPageSize: true });
       console.log(`wrote ${file}`);
     } else {
       for (const job of jobs) {
-        const page = await browser.newPage({ deviceScaleFactor: opts.scale, viewport: { width: Math.max(1, Math.ceil(job.size.width)), height: Math.max(1, Math.ceil(job.size.height)) } });
+        const page = await sandboxedPage(browser, { deviceScaleFactor: opts.scale, viewport: { width: Math.max(1, Math.ceil(job.size.width)), height: Math.max(1, Math.ceil(job.size.height)) } });
         try {
           await page.setContent(pageOf(theme, job.svg, job.size), { waitUntil: 'load' });
           await page.evaluate(() => Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 5000))]));

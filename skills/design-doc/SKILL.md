@@ -132,6 +132,7 @@ Use them for folders no agent should read (archives, closed tickets), never for 
   Chrome or Chromium, `CHROME_PATH` overrides), then `node <skill>/scripts/render.mjs docs/design/<slug>.html --png`
   writes one themed PNG per figure, 2x (`--scale 1`..`4`), as `<slug>-<figure id>.png`. A single `.svg` works too.
   The render refuses a figure below 400x120 or more than 4:1 stretched: fix the viewBox, not the lint.
+  Export renders without JavaScript and loads only inline data and fonts: remote or relative images do not appear.
 - **Google Doc:** one rule: paste the twin, then insert the PNGs. Put the twin without its first line on the
   clipboard (`tail -n +3 <slug>.llm.md`, piped to the first of `pbcopy`, `wl-copy`, `xclip -selection clipboard` that
   exists; with none of them, tell the user the twin's path and have them copy the file), then in the doc: Tools →

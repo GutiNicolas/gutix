@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.11.0
+## 0.12.0
 
 - Theme: a design doc takes its colours and fonts from `--theme`, the repo's `.design-doc-theme.css`, the linked org
   profile's theme, then the built-in one (`theme.mjs`; `--apply` writes it into the page). `check-doc.mjs` flags figure
@@ -10,4 +10,11 @@
   `chromium-browser` on `PATH`) through Playwright installed by `setup.sh` in `~/.cache/gutix`.
 - design-doc's publish step: one rule for Google Docs (paste the twin, insert the PNGs), with a clipboard fallback
   chain (`pbcopy`, `wl-copy`, `xclip`, or copy the file) instead of macOS only.
-- Validator, Cursor installer and org profiles (earlier in this release).
+- Export hardening: figure ids become safe file names (two figures cannot write the same file), docs render with
+  JavaScript off and the network closed (fonts still load), a figure with a nested svg is exported whole, timeouts
+  everywhere, `playwright-core` pinned, and setup or theme errors exit 2.
+
+## 0.11.0
+
+- Validator, Cursor installer and org profiles: `scripts/validate.mjs` checks the plugin, the Cursor installer writes
+  the skills for Cursor, and org profiles link a repo to its theme and settings.

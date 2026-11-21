@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deck title</title>
+<style>
+/* =========================================================
+   DECK TEMPLATE. Copy it, keep the archetypes you need, delete the rest.
+   Theme: the block between the gutix-theme markers is replaced by the resolved theme (see SKILL.md, step 3).
+   Everything else uses var(--token) only: no colour literal outside :root.
+   ========================================================= */
+:root {
+    /* Fallbacks for the optional deck tokens, and derived values. Never themed. */
+    --paper: #fff; --off: var(--soft); --accent-on-dark: var(--accent); --accent-fill: var(--accent); --accent-dark: var(--ink);
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --stage-bg: color-mix(in srgb, var(--ink) 80%, black);
+    --on-dark-card: color-mix(in srgb, var(--ink) 88%, var(--paper));
+    --on-dark-line: color-mix(in srgb, var(--ink) 76%, var(--paper));
+}
+/* gutix-theme */
+:root {
+    --ink: #1c2330; --muted: #5b6676; --line: #d9dee6; --soft: #f4f6f9;
+    --accent: #1f5fbf; --accent-soft: #e8f0fc;
+    --warn: #9a5b00; --warn-soft: #fff4de; --ok: #1d6b3a; --ok-soft: #e6f4ea; --bad: #c0392b; --bad-soft: #fdecea;
+    --font-sans: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+/* /gutix-theme */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ============ FIXED 16:9 STAGE ============ */
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--stage-bg); }
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg); }
+.deck-stage {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    overflow: hidden; transform-origin: 0 0; background: var(--paper);
+}
+.slide {
+    position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; display: block;
+    visibility: hidden; opacity: 0; pointer-events: none;
+    background: var(--paper); font-family: var(--font-sans);
+}
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+
+@page { size: 1920px 1080px; margin: 0; }
+@media print {
+    html, body { width: 1920px; height: auto; overflow: visible; background: var(--paper); }
+    .deck-viewport { position: static; overflow: visible; }
+    .deck-stage { position: static; width: auto; height: auto; transform: none !important; }
+    .slide {
+        position: relative; display: block !important; visibility: visible !important; opacity: 1 !important;
+        width: 1920px; height: 1080px; break-after: page; page-break-after: always;
+    }
+    .slide:last-child { break-after: auto; page-break-after: auto; }
+    .reveal { opacity: 1 !important; transform: none !important; }
+    .deck-controls, .edit-toggle, .edit-hotzone { display: none !important; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .2s !important; }
+}
+
+/* ============ SURFACES ============ */
+.slide.on-light { background: var(--paper); color: var(--ink); }
+.slide.on-dark  { background: var(--accent-dark); color: var(--paper); }
+
+/* LAYOUT INVARIANT: center vertically and reserve the bottom band, so the viewport-anchored control bar never
+   lands on top of a footnote. */
+.slide-inner { position: absolute; inset: 96px 128px 132px; display: flex; flex-direction: column; justify-content: center; }
+
+/* ============ CHROME (one name, top-right of every content slide) ============ */
+.wm { position: absolute; top: 46px; right: 64px; font-weight: 500; font-size: 26px; letter-spacing: .01em; }
+.on-dark .wm { color: var(--paper); }
+.on-light .wm { color: var(--muted); }
+
+/* ============ TYPE SCALE ============ */
+h1 { font-weight: 800; font-size: 116px; line-height: 1.02; letter-spacing: -.035em; }
+h2 { font-weight: 800; font-size: 88px; line-height: 1.06; letter-spacing: -.03em; max-width: 1500px; }
+h3 { font-weight: 500; font-size: 40px; line-height: 1.2; }
+.kicker { font-weight: 400; font-size: 26px; letter-spacing: .16em; text-transform: uppercase; margin-bottom: 24px; }
+.on-light .kicker { color: var(--accent); }
+.on-dark  .kicker { color: var(--accent-on-dark); }
+.lede { font-weight: 300; font-size: 46px; line-height: 1.45; max-width: 1400px; margin-top: 30px; }
+p, li { font-weight: 300; font-size: 40px; line-height: 1.5; }
+.dim { color: var(--muted); }
+.on-dark .dim { color: var(--line); }
+.hi { color: var(--accent); }
+.on-dark .hi { color: var(--accent-on-dark); }
+
+/* Footnote: where the numbers come from, tagged read, inferred or measured. Stays clear of the control band. */
+.note { font-family: var(--font-mono); font-size: 22px; line-height: 1.55; color: var(--muted); margin-top: 40px; max-width: 1560px; }
+.on-dark .note { color: var(--line); }
+
+/* ============ REVEALS ============ */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity .5s var(--ease), transform .5s var(--ease); }
+.slide.visible .reveal { opacity: 1; transform: none; }
+.slide.visible .reveal:nth-child(1) { transition-delay: .04s; }
+.slide.visible .reveal:nth-child(2) { transition-delay: .12s; }
+.slide.visible .reveal:nth-child(3) { transition-delay: .20s; }
+.slide.visible .reveal:nth-child(4) { transition-delay: .28s; }
+.slide.visible .reveal:nth-child(5) { transition-delay: .36s; }
+
+/* ARCHETYPE 1: TITLE */
+.title-sub { font-weight: 300; font-size: 34px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-top: 18px; }
+.title-foot { position: absolute; bottom: 56px; left: 128px; font-size: 26px; font-weight: 300; color: var(--muted); }
+
+/* ARCHETYPE 2: SECTION DIVIDER */
+.section-slide .slide-inner { flex-direction: row; align-items: center; gap: 130px; }
+.section-num { font-weight: 800; font-size: 200px; line-height: 1; color: var(--accent-on-dark); letter-spacing: -.05em; flex: none; }
+.section-ttl { font-weight: 300; font-size: 82px; line-height: 1.12; color: var(--paper); }
+
+/* ARCHETYPE 3: BULLETS (three at most) */
+ul.clean { list-style: none; display: flex; flex-direction: column; gap: 30px; margin-top: 48px; max-width: 1480px; }
+ul.clean li { padding-left: 44px; position: relative; }
+ul.clean li::before { content: ""; position: absolute; left: 0; top: 26px; width: 22px; height: 3px; background: var(--accent-fill); }
+
+/* ARCHETYPES 4 and 5: CARDS AND METRICS.
+   LAYOUT INVARIANT: cards are flex columns, so long content grows the card instead of spilling past its border. */
+.row { display: flex; gap: 32px; margin-top: 52px; align-items: stretch; }
+.card {
+    flex: 1; min-width: 0; display: flex; flex-direction: column;
+    padding: 44px 44px 48px; border-radius: 24px; background: var(--off); border: 1px solid var(--line);
+}
+.on-dark .card { background: var(--on-dark-card); border-color: var(--on-dark-line); }
+.card.fill, .card.deep { border-color: transparent; }
+.card.fill { background: var(--accent-fill); color: var(--paper); }
+.card.deep { background: var(--accent-dark); color: var(--paper); }
+.on-dark .card.deep { background: var(--on-dark-card); }
+/* Any filled card restates EVERY text colour, or something renders invisible. */
+.card.fill *, .card.deep * { color: inherit; }
+.card.fill .label, .card.deep .label, .card.fill .metric small, .card.deep .metric small { color: inherit; opacity: .75; }
+.label { font-weight: 500; font-size: 24px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 22px; }
+.card p, .card li { font-size: 32px; line-height: 1.45; }
+/* LAYOUT INVARIANT: line-height 1 plus an explicit margin, or the caption climbs under the digits. */
+.metric { font-weight: 800; font-size: 96px; line-height: 1; letter-spacing: -.04em; }
+.metric small {
+    display: block; font-family: var(--font-mono); font-weight: 400; font-size: 22px; letter-spacing: .07em;
+    text-transform: uppercase; line-height: 1.5; margin-top: 20px; color: var(--muted);
+}
+
+/* ARCHETYPE 6: TECHNICAL SHEET (hairlines and registration marks around real text) */
+.sheet { position: relative; margin-top: 44px; padding: 56px 64px; }
+.sheet::before, .sheet::after { content: ""; position: absolute; left: -34px; right: -34px; height: 1px; background: var(--line); }
+.sheet::before { top: 0; } .sheet::after { bottom: 0; }
+.xhair { position: absolute; width: 34px; height: 34px; pointer-events: none; }
+.xhair::before, .xhair::after { content: ""; position: absolute; background: var(--muted); opacity: .5; }
+.xhair::before { left: 50%; top: 0; width: 1px; height: 100%; }
+.xhair::after  { top: 50%; left: 0; height: 1px; width: 100%; }
+
+/* ARCHETYPE 6: CODE / CONFIG (real text, never a screenshot) */
+.code { font-family: var(--font-mono); font-size: 30px; line-height: 1.75; color: var(--ink); white-space: pre; }
+.code .n { color: var(--accent); }
+.code .k { color: var(--bad); }
+.code .f { color: var(--ok); }
+.code .c { color: var(--muted); }
+
+/* ARCHETYPE 7: DEPENDENCY CHAIN. Indented chain, (value) per node, a total; the footnote says which number it is. */
+.chain { font-family: var(--font-mono); font-size: 30px; line-height: 1.72; color: var(--ink); }
+.chain .step { display: block; white-space: pre; }
+.chain .v { color: var(--muted); }
+.chain .total { display: block; margin-top: 34px; }
+.chain .total b { color: var(--warn); font-weight: 500; }
+
+/* ARCHETYPE 8: TWO CHAINS (before | after) */
+.compare { display: flex; gap: 88px; margin-top: 40px; }
+.compare > div { flex: 1; min-width: 0; }
+.compare h4 { font-weight: 400; font-size: 28px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 34px; text-align: center; }
+.compare .rule { height: 1px; background: var(--line); margin: 0 0 34px; }
+
+/* ARCHETYPE 9: STATEMENT (one phrase) */
+.statement { font-weight: 300; font-size: 128px; line-height: 1.05; color: var(--accent-on-dark); letter-spacing: -.02em; }
+
+/* ARCHETYPE 10: CLOSING */
+.closing { background: var(--accent-fill); color: var(--paper); }
+.closing .slide-inner { align-items: flex-start; }
+.closing .end { font-weight: 800; font-size: 104px; letter-spacing: -.03em; }
+
+/* ============ CONTROLS (outside the stage) ============ */
+.deck-controls {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 1000;
+    display: flex; align-items: center; gap: 18px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .14em;
+    color: var(--line); background: color-mix(in srgb, var(--ink) 90%, black); border: 1px solid var(--on-dark-line); padding: 9px 16px;
+}
+.progress-rail { width: 180px; height: 3px; background: var(--on-dark-line); position: relative; }
+.progress-rail i { position: absolute; inset: 0 auto 0 0; background: var(--accent-on-dark); width: 0; }
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+    position: fixed; top: 16px; left: 16px; opacity: 0; pointer-events: none; transition: opacity .3s ease; z-index: 10001;
+    background: var(--accent-fill); color: var(--paper); border: 0; font-family: var(--font-mono); font-size: 12px;
+    letter-spacing: .12em; padding: 8px 11px; cursor: pointer;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+body.editing .slide [contenteditable="true"] { outline: 1px dashed var(--accent); }
+</style>
+</head>
+<body>
+<div class="edit-hotzone" aria-hidden="true"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">EDIT</button>
+
+<div class="deck-viewport">
+<!-- Bump data-deck-version on every rewrite and set DECK_SLUG in the script, or a stale localStorage snapshot
+     silently resurrects the old deck in the browser. -->
+<main class="deck-stage" id="deckStage" data-deck-version="1">
+
+    <!-- 1. TITLE -->
+    <section class="slide title-slide on-light active">
+        <div class="slide-inner">
+            <h1 class="reveal">Deck title</h1>
+            <p class="title-sub reveal">Month 2026</p>
+        </div>
+        <div class="title-foot">Team or author</div>
+    </section>
+
+    <!-- 2. SECTION DIVIDER -->
+    <section class="slide section-slide on-dark">
+        <div class="slide-inner">
+            <div class="section-num reveal">01</div>
+            <div class="section-ttl reveal">Section<br>name</div>
+        </div>
+    </section>
+
+    <!-- 3. BULLETS ON DARK -->
+    <section class="slide on-dark">
+        <div class="wm">Deck name</div>
+        <div class="slide-inner">
+            <p class="kicker reveal">the problem</p>
+            <h2 class="reveal">One idea per slide, in the listener's words.</h2>
+            <ul class="clean reveal">
+                <li>First point, short.</li>
+                <li>Second point, with a <span class="hi">highlighted fact</span>.</li>
+                <li>Third point.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- 4. FILLED BLOCKS -->
+    <section class="slide on-dark">
+        <div class="wm">Deck name</div>
+        <div class="slide-inner">
+            <h2 class="reveal">Filled blocks</h2>
+            <div class="row reveal">
+                <article class="card fill">
+                    <p class="label">Label</p>
+                    <div class="metric">41<small>services per stage</small></div>
+                </article>
+                <article class="card deep">
+                    <p class="label">Label</p>
+                    <h3>Degraded performance</h3>
+                </article>
+                <article class="card deep">
+                    <p class="label">Label</p>
+                    <h3>Unavailable</h3>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. METRICS ON LIGHT -->
+    <section class="slide on-light">
+        <div class="wm">Deck name</div>
+        <div class="slide-inner">
+            <p class="kicker reveal">section</p>
+            <h2 class="reveal">Big numbers.</h2>
+            <div class="row reveal">
+                <article class="card"><p class="label">Default</p><div class="metric">15 s<small>read, config</small></div></article>
+                <article class="card"><p class="label">Variant A</p><div class="metric">400 ms<small>read, config</small></div></article>
+                <article class="card fill"><p class="label">Variant B</p><div class="metric">200 ms<small>measured, p99</small></div></article>
+            </div>
+            <p class="note reveal">Environment: name it. Source: file or query. Tag: read, inferred or measured.</p>
+        </div>
+    </section>
+
+    <!-- 6. CODE / CONFIG SHEET -->
+    <section class="slide on-light">
+        <div class="wm">Deck name</div>
+        <div class="slide-inner">
+            <p class="kicker reveal">the rule</p>
+            <h2 class="reveal">Service by service</h2>
+            <div class="sheet reveal">
+                <span class="xhair" style="left:-17px;top:-17px"></span>
+                <span class="xhair" style="right:-17px;bottom:-17px"></span>
+<div class="code"><span class="k">long</span> GLOBAL_LIMIT = <span class="n">10000</span>;
+<span class="k">long</span> remaining    = GLOBAL_LIMIT - <span class="f">elapsed</span>();
+<span class="k">long</span> effective    = <span class="f">min</span>(step.limit, remaining - step.downstream); <span class="c">// the budget caps the step</span></div>
+            </div>
+            <p class="note reveal">Verified against the method that computes it. Where a ticket and the code differ, show the code.</p>
+        </div>
+    </section>
+
+    <!-- 7. DEPENDENCY CHAIN -->
+    <section class="slide on-light">
+        <div class="wm">Deck name</div>
+        <div class="slide-inner">
+            <h2 class="reveal">Costliest path</h2>
+            <p class="kicker reveal" style="margin-top:16px">(reserved, not measured)</p>
+            <div class="sheet reveal">
+                <span class="xhair" style="left:-17px;top:-17px"></span>
+                <span class="xhair" style="right:-17px;bottom:-17px"></span>
+<div class="chain"><span class="step">STEP_A <span class="v">(93)</span></span>
+<span class="step">  → STEP_B <span class="v">(70)</span></span>
+<span class="step">    → STEP_C <span class="v">(2370)</span></span>
+<span class="step">      → STEP_D <span class="v">(400)</span></span>
+<span class="total"><b>#Total</b> 2933</span></div>
+            </div>
+            <p class="note reveal">Inferred: the longest serial path through the dependency graph. Parallel steps are never added.</p>
+        </div>
+    </section>
+
+    <!-- 8. BEFORE / AFTER CHAINS -->
+    <section class="slide on-light">
+        <div class="wm">Deck name</div>
+        <div class="slide-inner">
+            <div class="compare reveal">
+                <div>
+                    <h4>Before</h4><div class="rule"></div>
+<div class="chain"><span class="step">STEP_A <span class="v">(5000)</span></span>
+<span class="step">  → STEP_B <span class="v">(2500)</span></span>
+<span class="step">    → STEP_C <span class="v">(5000)</span></span>
+<span class="total"><b>#Total</b> 12500</span></div>
+                </div>
+                <div>
+                    <h4>After</h4><div class="rule"></div>
+<div class="chain"><span class="step">STEP_A <span class="v">(2000)</span></span>
+<span class="step">  → STEP_B <span class="v">(2100)</span></span>
+<span class="step">    → STEP_C <span class="v">(3000)</span></span>
+<span class="total"><b>#Total</b> 7100</span></div>
+                </div>
+            </div>
+            <p class="note reveal">Both chains are the same kind of number (all read from config). Say which.</p>
+        </div>
+    </section>
+
+    <!-- 9. STATEMENT -->
+    <section class="slide on-dark">
+        <div class="wm">Deck name</div>
+        <div class="slide-inner"><div class="statement reveal">Questions</div></div>
+    </section>
+
+    <!-- 10. CLOSING -->
+    <section class="slide closing">
+        <div class="slide-inner">
+            <div class="end reveal">Thank you</div>
+        </div>
+    </section>
+
+</main>
+</div>
+
+<nav class="deck-controls" aria-label="Progress">
+    <span id="slideLabel">01 / 10</span>
+    <div class="progress-rail" aria-hidden="true"><i id="progressFill"></i></div>
+    <span>← → space</span>
+</nav>
+
+<script>
+const DECK_SLUG = 'slug';
+class DeckEditor {
+    constructor() {
+        this.isActive = false;
+        this.stage = document.getElementById('deckStage');
+        this.storageKey = 'deck-' + DECK_SLUG + '-v' + this.stage.dataset.deckVersion;
+        this.toggle = document.getElementById('editToggle');
+        this.restore();
+    }
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('editing', this.isActive);
+        this.toggle.classList.toggle('active', this.isActive);
+        this.stage.querySelectorAll('h1,h2,h3,h4,p,li,.metric,.kicker,.note,.statement,.section-ttl,.section-num')
+            .forEach((el) => el.setAttribute('contenteditable', this.isActive ? 'true' : 'false'));
+        if (!this.isActive) this.persist();
+    }
+    persist() { try { localStorage.setItem(this.storageKey, this.stage.innerHTML); } catch (e) { /* storage blocked */ } }
+    restore() {
+        try { const saved = localStorage.getItem(this.storageKey); if (saved) this.stage.innerHTML = saved; } catch (e) { /* storage blocked */ }
+    }
+}
+
+class SlidePresentation {
+    constructor() {
+        this.slides = document.querySelectorAll('.slide');
+        this.currentSlide = 0;
+        this.stage = document.getElementById('deckStage');
+        this.label = document.getElementById('slideLabel');
+        this.fill = document.getElementById('progressFill');
+        this.setupStageScale();
+        this.setupKeyboardNav();
+        this.setupTouchNav();
+        this.setupWheelNav();
+        const h = parseInt((location.hash || '').replace('#', ''), 10);
+        this.showSlide(Number.isFinite(h) && h > 0 ? h - 1 : 0);
+    }
+    setupStageScale() {
+        const scale = () => {
+            const f = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+            const x = (window.innerWidth - 1920 * f) / 2;
+            const y = (window.innerHeight - 1080 * f) / 2;
+            this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+        };
+        scale();
+        window.addEventListener('resize', scale);
+    }
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target && e.target.getAttribute('contenteditable') === 'true') return;
+            if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); this.showSlide(this.currentSlide + 1); }
+            else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); this.showSlide(this.currentSlide - 1); }
+            else if (e.key === 'Home') { this.showSlide(0); }
+            else if (e.key === 'End') { this.showSlide(this.slides.length - 1); }
+        });
+    }
+    setupTouchNav() {
+        let x0 = null;
+        this.stage.addEventListener('touchstart', (e) => { x0 = e.changedTouches[0].clientX; }, { passive: true });
+        this.stage.addEventListener('touchend', (e) => {
+            if (x0 == null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            if (Math.abs(dx) > 50) this.showSlide(this.currentSlide + (dx < 0 ? 1 : -1));
+            x0 = null;
+        });
+    }
+    setupWheelNav() {
+        let locked = false;
+        window.addEventListener('wheel', (e) => {
+            if (locked || Math.abs(e.deltaY) < 20) return;
+            locked = true;
+            this.showSlide(this.currentSlide + (e.deltaY > 0 ? 1 : -1));
+            setTimeout(() => { locked = false; }, 420);
+        }, { passive: true });
+    }
+    showSlide(i) {
+        this.currentSlide = Math.max(0, Math.min(i, this.slides.length - 1));
+        this.slides.forEach((s, k) => {
+            s.classList.toggle('active', k === this.currentSlide);
+            s.classList.toggle('visible', k === this.currentSlide);
+        });
+        const n = this.currentSlide + 1, t = this.slides.length;
+        this.label.textContent = String(n).padStart(2, '0') + ' / ' + String(t).padStart(2, '0');
+        this.fill.style.width = ((n / t) * 100) + '%';
+        if (location.hash !== '#' + n) history.replaceState(null, '', '#' + n);
+    }
+}
+
+const editor = new DeckEditor();
+const deck = new SlidePresentation();
+
+const hotzone = document.querySelector('.edit-hotzone');
+const editToggle = document.getElementById('editToggle');
+let hideTimeout = null;
+const scheduleHide = () => { hideTimeout = setTimeout(() => { if (!editor.isActive) editToggle.classList.remove('show'); }, 400); };
+editToggle.addEventListener('click', () => editor.toggleEditMode());
+hotzone.addEventListener('click', () => editor.toggleEditMode());
+hotzone.addEventListener('mouseenter', () => { clearTimeout(hideTimeout); editToggle.classList.add('show'); });
+hotzone.addEventListener('mouseleave', scheduleHide);
+editToggle.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', scheduleHide);
+document.addEventListener('keydown', (e) => {
+    if ((e.key === 'e' || e.key === 'E') && !e.target.getAttribute('contenteditable')) editor.toggleEditMode();
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); editor.persist(); }
+});
+</script>
+</body>
+</html>

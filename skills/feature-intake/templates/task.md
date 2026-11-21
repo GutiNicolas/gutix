@@ -12,10 +12,19 @@
 
 ## Contract
 <The shapes and rules this task must follow, or a link to the roadmap's Contracts section.>
+- **Non-functional:** <latency or new calls on a critical path, blast radius (which tenants, plans or callers), idempotency if it runs twice | none>
+
+## Decision (don't reopen)
+<!-- What was already decided, so the worker doesn't re-litigate it. Delete the block only when nothing was decided. -->
+- **Chosen:** <the approach, and why in one line>
+- **Rejected:** <the alternative>. Don't implement it.
+- **Explicitly out of scope:** <what a reader might assume is included>
 
 ## Acceptance criteria (executable)
 <!-- Each line is a check the worker runs itself; the reviewer re-checks against the diff. -->
 - [ ] <behavior> — `<command that proves it>`
+- [ ] <what must stay exactly as it is> still holds (required regression criterion) — `<existing test or command>`
+- [ ] When <dependency> is down, absent or times out, <it degrades like this and doesn't break the rest> (required dependency failure criterion; "n/a: no dependency" if true) — `<command>`
 - [ ] Unit/integration tests pass — `<command>`
 - [ ] e2e scenario <name> in the product's e2e repo passes — `<command>` (user-facing flows only)
 - [ ] Repo rules: the repo's `CLAUDE.md` and the standards it lists

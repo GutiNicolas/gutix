@@ -36,8 +36,15 @@ Never skip a check the repo or the task requires because the change looks small.
 - Run them; read failures from the output, not from memory. Quote the one line that matters, not the whole log.
 - A failure the change caused: fix it (or hand it to `gutix:bug-fix`) and re-run that check. Still failing after
   three fix attempts on the same failure: stop, report it with what you tried and your best guess, and ask the user.
-- A failure that was already there: confirm on the base branch (`git stash` or a worktree) before calling it
-  pre-existing.
+- A failure that was already there: confirm on the base branch, in a temporary worktree, before calling it
+  pre-existing. Never `git stash`: the stash is shared with every other session on the machine.
+- **Baseline for lint and type-check.** A repo with old errors must not hide new ones or block a clean change, so report
+  only the diagnostics the change adds. Run the linter or `tsc` once in a temporary worktree of `HEAD`
+  (`git worktree add --detach "$TMPDIR/base" HEAD`, install or link dependencies there, remove it after) and once on the
+  working tree, each output to a file, then
+  `node skills/verify/scripts/new-diagnostics.mjs before.txt after.txt --before-root=<worktree> --after-root=<repo>`.
+  It compares by file + rule + message and ignores line numbers, so code that only moved is not new. Report the new
+  ones as failed and the count of old ones as "existing, not touched"; never fix unrelated debt in the same change.
 - **Flaky (passes and fails on the same code): never retry until green**, never add sleeps, longer timeouts or
   `@Disabled`/`skip` to get past it. A retry that passes proves nothing and teaches the next session to retry. Find
   the cause (order dependence, shared state, time, a race, a container not ready) and fix it in the test or the code.

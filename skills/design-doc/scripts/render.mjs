@@ -137,7 +137,7 @@ function parseArgs(argv) {
   return opts;
 }
 
-function loadPlaywright() {
+export function loadPlaywright() {
   const deps = process.env.GUTIX_DEPS || path.join(os.homedir(), '.cache', 'gutix');
   try {
     return createRequire(path.join(deps, 'package.json'))('playwright-core');

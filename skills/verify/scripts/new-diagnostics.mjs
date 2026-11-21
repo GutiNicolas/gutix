@@ -7,15 +7,27 @@
 // runs happened in different directories (a worktree of HEAD and the working tree).
 import fs from 'node:fs';
 
+// A root can be spelled two ways in the output (macOS: /var/... given, /private/var/... printed by eslint).
+const rootSpellings = (root) => {
+	if (!root) return [];
+	const spellings = [root.replace(/\/$/, '')];
+	try { spellings.push(fs.realpathSync(root)); } catch { /* the root may not exist any more */ }
+	return [...new Set(spellings)];
+};
+
 const keyed = (text, root) => {
 	const out = [];
 	let file = '';
-	for (let line of text.split('\n')) {
-		if (root) line = line.split(`${root.replace(/\/$/, '')}/`).join('');
-		line = line.replace(/\s+$/, '');
+	const roots = rootSpellings(root);
+	const lines = text.split('\n').map((l) => {
+		for (const r of roots) l = l.split(`${r}/`).join('');
+		return l.replace(/\s+$/, '');
+	});
+	for (const [i, line] of lines.entries()) {
 		const stylish = line.match(/^\s+\d+:\d+\s+(.*)$/);
 		if (stylish) { out.push(`${file}: ${stylish[1].replace(/\s+/g, ' ')}`); continue; }
-		if (/^[^\s].*\.[a-z]+$/i.test(line) && !/\s/.test(line)) { file = line; continue; } // stylish file header
+		// stylish file header: an unindented line whose next non-blank line is an indented "n:n" diagnostic (paths may hold spaces)
+		if (/^\S/.test(line) && /^\s+\d+:\d+\s/.test(lines.slice(i + 1).find((l) => l.trim()) ?? '')) { file = line; continue; }
 		if (/^\s|^$|^\S? ?\d+ problems?/.test(line) || /^Found \d+ errors?/.test(line)) continue; // blanks, summaries, continuations
 		out.push(line.replace(/[(:]\d+[,:]\d+\)?/, '').replace(/\s+/g, ' '));
 	}
@@ -33,7 +45,7 @@ export function newDiagnostics(before, after, roots = {}) {
 }
 
 if (process.argv[1] && import.meta.url === new URL(process.argv[1], 'file://').href) {
-	const flag = (name) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1];
+	const flag = (name) => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 	const [beforeFile, afterFile] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 	if (!beforeFile || !afterFile) { console.error('usage: new-diagnostics.mjs <before.txt> <after.txt> [--before-root=<dir>] [--after-root=<dir>]'); process.exit(2); }
 	const fresh = newDiagnostics(fs.readFileSync(beforeFile, 'utf8'), fs.readFileSync(afterFile, 'utf8'), { before: flag('before-root'), after: flag('after-root') });

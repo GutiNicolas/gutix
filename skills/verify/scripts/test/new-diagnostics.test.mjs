@@ -52,3 +52,28 @@ test('the CLI exits 1 and prints only the new diagnostics', () => {
 	const clean = spawnSync('node', [script, path.join(dir, 'b.txt'), path.join(dir, 'b.txt')], { encoding: 'utf8' });
 	assert.equal(clean.status, 0);
 });
+
+test('a root given as a symlink also strips the real path eslint prints (macOS /var vs /private/var)', () => {
+	const real = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'nd-real-')));
+	const link = `${real}-link`;
+	fs.symlinkSync(real, link);
+	const before = `${real}/src/a.ts:3:1: error e\n`;
+	const after = `${link}/src/a.ts:8:1: error e\n`;
+	assert.equal(newDiagnostics(before, after, { before: link, after: link }).length, 0);
+});
+
+test('a root containing "=" is kept whole by the CLI flag parser', () => {
+	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nd-eq-'));
+	fs.writeFileSync(path.join(dir, 'b.txt'), '/r/a=b/src/a.ts:3:1: error e\n');
+	fs.writeFileSync(path.join(dir, 'a.txt'), '/w/src/a.ts:9:1: error e\n');
+	const r = spawnSync('node', [script, path.join(dir, 'b.txt'), path.join(dir, 'a.txt'), '--before-root=/r/a=b', '--after-root=/w'], { encoding: 'utf8' });
+	assert.equal(r.status, 0, r.stdout);
+});
+
+test('stylish file headers with a space in the path keep their diagnostics per file', () => {
+	const before = '/r/my app/a.js\n  4:7  error  x is unused  no-unused-vars\n';
+	const after = '/r/my app/a.js\n  4:7  error  x is unused  no-unused-vars\n\n/r/my app/b.js\n  2:1  error  x is unused  no-unused-vars\n';
+	const fresh = newDiagnostics(before, after);
+	assert.equal(fresh.length, 1);
+	assert.match(fresh[0], /b\.js/);
+});

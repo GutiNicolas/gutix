@@ -85,7 +85,7 @@ test('link-org copies the plugin only into the matching clone, hides it from git
 
   assert.deepEqual(skillDirs(f.match), ['acme-delta', 'acme-gamma']);
   assert.match(read(path.join(f.match, '.cursor/skills/acme-gamma/SKILL.md')), /^---\nname: acme-gamma\n/);
-  assert.ok(read(excludeOf(f.match)).split('\n').includes('.cursor/skills/acme-*/'));
+  for (const l of ['.cursor/skills/acme-delta/', '.cursor/skills/acme-gamma/', '.cursor/skills/.gutix-*/']) assert.ok(read(excludeOf(f.match)).split('\n').includes(l), l);
   assert.equal(status(f.match), '', 'git sees nothing new in the matching clone');
   assert.deepEqual(snapshot(f.other), otherBefore, 'the clone that does not match is untouched');
   assert.ok(!exists(old), 'no global copy left');
@@ -117,7 +117,7 @@ test('re-running the sweep (update) is idempotent: same files, no duplicate excl
   }
   assert.deepEqual(snapshot(path.join(f.match, '.cursor')), treeBefore);
   assert.equal(read(excludeOf(f.match)), excludeBefore);
-  assert.equal(excludeBefore.split('\n').filter((l) => l === '.cursor/skills/acme-*/').length, 1);
+  for (const l of ['.cursor/skills/acme-delta/', '.cursor/skills/acme-gamma/', '.cursor/skills/.gutix-*/']) assert.equal(excludeBefore.split('\n').filter((x) => x === l).length, 1, l);
   assert.deepEqual(registry(f.home), regBefore);
 });
 
@@ -165,12 +165,12 @@ test('exclude file edge cases come back byte for byte: no trailing newline, a li
   const had = clone(f.root, 'had', 'https://github.com/acme/had');
   const none = clone(f.root, 'none', 'https://github.com/acme/none');
   fs.writeFileSync(excludeOf(noEol), '# mine\n*.log');
-  fs.writeFileSync(excludeOf(had), '# mine\n.cursor/skills/acme-*/\n');
+  fs.writeFileSync(excludeOf(had), '# mine\n.cursor/skills/acme-gamma/\n');
   fs.rmSync(excludeOf(none));
   const before = [noEol, had, none].map(snapshot);
   assert.equal(gutix(f.home, ['link-org', f.org.url, '--projects-root', f.root]).status, 0);
-  assert.equal(read(excludeOf(noEol)), '# mine\n*.log\n.cursor/skills/acme-*/\n');
-  assert.equal(read(excludeOf(had)), '# mine\n.cursor/skills/acme-*/\n', 'not duplicated');
+  assert.equal(read(excludeOf(noEol)), '# mine\n*.log\n.cursor/skills/acme-delta/\n.cursor/skills/acme-gamma/\n.cursor/skills/.gutix-*/\n');
+  assert.equal(read(excludeOf(had)), '# mine\n.cursor/skills/acme-gamma/\n.cursor/skills/acme-delta/\n.cursor/skills/.gutix-*/\n', 'the line that was there is not duplicated');
   assert.equal(gutix(f.home, ['unlink-org', 'acme']).status, 0);
   assert.deepEqual([noEol, had, none].map(snapshot), before);
 });
@@ -302,4 +302,47 @@ test('unlink-org does not eat a trailing newline the user added after our exclud
   fs.appendFileSync(excludeOf(f.match), '# later\n');
   assert.equal(gutix(f.home, ['unlink-org', 'acme']).status, 0);
   assert.equal(read(excludeOf(f.match)), '*.log\n# later\n');
+});
+
+test('a teammate\'s own skill with the same prefix is not hidden from git', () => {
+  const f = fixture();
+  assert.equal(gutix(f.home, ['link-org', f.org.url, '--projects-root', f.root]).status, 0);
+  write(path.join(f.match, '.cursor/skills/acme-handmade/SKILL.md'), 'mine');
+  assert.match(status(f.match), /acme-handmade/);
+});
+
+test('an org linked with the earlier single-glob exclude line is cleaned up by unlink-org and re-lined by update', () => {
+  const f = fixture();
+  assert.equal(gutix(f.home, ['link-org', f.org.url, '--projects-root', f.root]).status, 0);
+  // Put the repo and its state back the way the earlier version left them.
+  const reg = registry(f.home);
+  const st = reg.orgs[0].repos[0];
+  fs.writeFileSync(excludeOf(f.match), '.cursor/skills/acme-*/\n');
+  delete st.excludes;
+  Object.assign(st, { excludeAdded: true, excludeCreated: false, excludeNoEol: false });
+  write(path.join(f.home, '.config/gutix/orgs.json'), JSON.stringify(reg));
+  const before = read(excludeOf(f.match));
+  assert.equal(gutix(f.home, ['update']).status, 0);
+  const lines = read(excludeOf(f.match)).split('\n');
+  assert.ok(!lines.includes('.cursor/skills/acme-*/'), 'the glob is replaced');
+  assert.ok(lines.includes('.cursor/skills/acme-gamma/'));
+  assert.equal(gutix(f.home, ['unlink-org', 'acme']).status, 0);
+  assert.equal(read(excludeOf(f.match)), '');
+  assert.deepEqual(skillDirs(f.match), []);
+  assert.notEqual(before, '');
+});
+
+test('a re-sweep adds the line of a new skill and drops the line of a skill that is gone', () => {
+  const f = fixture();
+  assert.equal(gutix(f.home, ['link-org', f.org.url, '--projects-root', f.root]).status, 0);
+  git(f.org.work, 'rm', '-q', '-r', 'skills/delta');
+  write(path.join(f.org.work, 'skills/zeta/SKILL.md'), skill('zeta'));
+  git(f.org.work, 'add', '-A'); git(f.org.work, 'commit', '-q', '-m', 'swap'); git(f.org.work, 'push', '-q', 'origin', 'main');
+  assert.equal(gutix(f.home, ['update']).status, 0);
+  const lines = read(excludeOf(f.match)).split('\n');
+  assert.ok(lines.includes('.cursor/skills/acme-zeta/') && !lines.includes('.cursor/skills/acme-delta/'));
+  assert.deepEqual(skillDirs(f.match), ['acme-gamma', 'acme-zeta']);
+  assert.equal(status(f.match), '');
+  assert.equal(gutix(f.home, ['unlink-org', 'acme']).status, 0);
+  assert.ok(!read(excludeOf(f.match)).includes('acme-'));
 });

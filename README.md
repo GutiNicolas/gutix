@@ -78,8 +78,9 @@ whose `origin` matches the profile, so outside those repos none of its skills or
 
 - **Which clones:** git clones under your projects root, `~/projects` by default (`--projects-root <dir>`, repeatable;
   gutix remembers it). It looks two folders deep and skips hidden folders and `node_modules`.
-- **Nothing is committed:** gutix adds `.cursor/skills/<prefix>*/` to the repo's `.git/info/exclude`, never to a tracked
-  `.gitignore`. A folder in `.cursor/skills/` that gutix did not generate is never overwritten.
+- **Nothing is committed:** gutix adds one line per generated skill (`.cursor/skills/<prefix><skill>/`) to the repo's
+  `.git/info/exclude`, never to a tracked `.gitignore`, so a skill a teammate adds by hand stays visible to git. A folder
+  in `.cursor/skills/` that gutix did not generate is never overwritten.
 - **Keeping it current:** the update re-runs this: new matching clones get the plugin, and a clone that no longer
   matches or is gone is reported and left as it is. `unlink-org` removes the copies and the lines it added.
 - **If you linked an org before this:** the next update removes its global copy (backed up to

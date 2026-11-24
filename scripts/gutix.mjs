@@ -341,7 +341,7 @@ function linkOrg({ url, branch, cursor = true, projects = [], projectsRoots = []
       for (const c of findClashes({ names: pickSkills(dest).skills.map((x) => `${entry.prefix}${x}`), ownTarget: path.join(home(), '.cursor/plugins/local', pluginName(dest)), projects: [] })) warn(`clash, ${c} has the same name as a generated skill; Cursor may load both`);
     } else if (isPlugin && cursor) { sweepOrg(reg.orgs[reg.orgs.length - 1]); }
     else if (!isPlugin) note(`${profile.name} is a profile only (no .claude-plugin/plugin.json), so there is no Cursor copy`);
-    if (exists(path.join(dest, '.claude-plugin/marketplace.json'))) note(`Claude Code: /plugin marketplace add ${url}${branch ? `#${branch}` : ''}`);
+    if (!scoped && exists(path.join(dest, '.claude-plugin/marketplace.json'))) note(`Claude Code: /plugin marketplace add ${url}${branch ? `#${branch}` : ''}`);
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }

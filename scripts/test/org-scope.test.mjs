@@ -240,3 +240,12 @@ test('update with no matching clone keeps a legacy global copy and says so, even
   assert.ok(exists(path.join(old, 'skills/acme-gamma/SKILL.md')), 'global copy kept');
   assert.match(r.stderr, /--projects-root/);
 });
+
+test('link-org does not suggest the Claude marketplace for a plugin scoped to repos', () => {
+  const f = fixture();
+  write(path.join(f.org.work, '.claude-plugin/marketplace.json'), JSON.stringify({ name: 'acme', plugins: [] }));
+  git(f.org.work, 'add', '-A'); git(f.org.work, 'commit', '-q', '-m', 'mkt'); git(f.org.work, 'push', '-q', 'origin', 'main');
+  const r = gutix(f.home, ['link-org', f.org.url, '--projects-root', f.root]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.doesNotMatch(r.stdout + r.stderr, /plugin marketplace add/);
+});

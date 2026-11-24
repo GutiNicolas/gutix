@@ -120,3 +120,7 @@ worker brief). Why sign-off exists and the bar it holds: [PRINCIPLES.md](docs/fe
 
 Decision records: `docs/decisions/` in the repo for one product, in the infra repo (named in the global
 `CLAUDE.md`) for decisions across products.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

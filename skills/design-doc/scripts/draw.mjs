@@ -39,6 +39,9 @@ export function checkSvg(svg) {
   if (hrefs.some((v) => !fragment(v))) problems.push('the drawing has an href that is not a #fragment');
   const urls = tags.flatMap((t) => [...t.matchAll(/url\(\s*(?:&quot;|["'])?\s*([^)]*)\)/gi)].map((m) => m[1]));
   if (urls.some((v) => !fragment(v))) problems.push('the drawing has a url() that is not a #fragment');
+  const css = [...svg.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n');
+  const cssUrls = [...css.matchAll(/url\(\s*(?:&quot;|["'])?\s*([^)]*)\)/gi)].map((m) => m[1]);
+  if (/@import\b/i.test(css) || cssUrls.some((v) => !fragment(v))) problems.push('the drawing has a <style> that loads something external');
   return problems;
 }
 

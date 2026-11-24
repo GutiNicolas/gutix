@@ -207,6 +207,14 @@ test('checkSvg flags on* attributes, non-fragment hrefs and url() outside #fragm
   assert.deepEqual(checkSvg(wrap('<use href="#a"/><use xlink:href="#b"/><rect fill="url(#g)" clip-path="url(&quot;#c&quot;)"/><text>onload= and href="x" as words</text>')), []);
 });
 
+test('checkSvg refuses a <style> that loads something external and allows var() and url(#id)', () => {
+  const wrap = (css) => `<svg viewBox="0 0 1 1"><title>x</title><text>a</text><style>${css}</style></svg>`;
+  for (const bad of ['@import "https://e.test/x.css";', '.a{fill:url(https://e.test/p.svg)}', '@import url(//e.test/x.css);']) {
+    assert.ok(checkSvg(wrap(bad)).some((p) => /<style>/.test(p)), bad);
+  }
+  assert.deepEqual(checkSvg(wrap('.a{stroke:var(--accent);marker-end:url(#D01-m)}')), []);
+});
+
 test('the theme decides the look: the SVG keeps var(--token) and the page gets the theme', () => {
   const css = ':root{--ink:#111;--muted:#666;--line:#ddd;--soft:#f5f5f5;--accent:#0a0a0a;--accent-soft:#ffcc00;--warn:#a50;--warn-soft:#fed;--ok:#173;--ok-soft:#dfe;--bad:#c22;--bad-soft:#fdd;--font-sans:sans-serif;--font-mono:monospace}';
   const html = pageOf('<html><head><title>t</title></head><body></body></html>', { preamble: '@import url("https://x.test/f.css");', root: css.slice(0) });

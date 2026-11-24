@@ -85,6 +85,7 @@ async function main(argv) {
     for (const file of files) {
       const id = path.basename(file).replace(/\.html?$/i, '');
       const label = path.basename(file);
+      const out = path.join(path.dirname(file), `${id}.svg`);
       // The kit is a context init script, so it is in place before the source's own script runs.
       const init = `window.__FIG = ${JSON.stringify(id)};\n${kit}`;
       const page = await sandboxedPage(browser, { viewport: { width: 1280, height: 900 } }, { scripts: true, init });
@@ -105,12 +106,14 @@ async function main(argv) {
         const svg = await page.evaluate(() => document.querySelector('svg')?.outerHTML ?? '');
         const problems = checkSvg(svg);
         if (problems.length) throw new Error(problems.join('; '));
-        const out = path.join(path.dirname(file), `${id}.svg`);
         fs.writeFileSync(out, `${svg}\n`);
         console.log(`wrote ${out}`);
       } catch (e) {
         failed++;
-        console.error(`draw: ${label}: ${e.message.split('\n')[0]}`);
+        // A drawing from an earlier run must not outlive the failure: inline-figures would put it in the doc.
+        const stale = fs.existsSync(out);
+        if (stale) fs.rmSync(out);
+        console.error(`draw: ${label}: ${e.message.split('\n')[0]}${stale ? ` (removed the old ${id}.svg)` : ''}`);
       } finally { await page.close(); }
     }
   } finally { await browser.close(); }

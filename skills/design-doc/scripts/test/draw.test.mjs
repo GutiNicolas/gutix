@@ -109,6 +109,19 @@ test('a drawing with active or external content is refused and nothing is writte
   assert.equal(r.stderr.trim().split('\n').length, Object.keys(shapes).length, r.stderr);
 });
 
+test('a failed redraw removes the old Dxx.svg instead of leaving a stale drawing', { skip }, () => {
+  const good = '<title>Ok</title><div id="canvas"></div><script>K.draw(() => { K.svg(300, 100); K.text(10, 40, "label", { size: 14 }); });</script>';
+  const dir = figsDir([good]);
+  assert.equal(run('draw.mjs', [dir]).status, 0);
+  assert.ok(fs.existsSync(path.join(dir, 'D01.svg')));
+  fs.writeFileSync(path.join(dir, 'D01.html'), '<title>Broken</title><script>throw new Error("kaput")</script>');
+  const r = run('draw.mjs', [dir]);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /D01\.html: .*kaput/);
+  assert.match(r.stderr, /removed the old D01\.svg/);
+  assert.equal(fs.existsSync(path.join(dir, 'D01.svg')), false);
+});
+
 test('checkSvg flags on* attributes, non-fragment hrefs and url() outside #fragment, and lets fragments through', () => {
   const wrap = (inner) => `<svg viewBox="0 0 1 1"><title>x</title><text>a</text>${inner}</svg>`;
   for (const bad of ['<g onload="x()"/>', '<rect onclick = "x()"/>', '<a href="javascript:x()"/>', '<a xlink:href="data:text/html,x"/>', '<image href="https://e.test/a.png"/>', '<image href="a.png"/>', '<rect fill="url(https://e.test/p)"/>', '<rect fill="url(\'a.svg#p\')"/>']) {

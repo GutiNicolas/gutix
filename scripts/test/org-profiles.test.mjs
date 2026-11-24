@@ -74,19 +74,29 @@ function gutixFixture() {
   git(path.dirname(checkout), 'clone', '-q', repo.url, checkout);
   return { ...repo, checkout };
 }
+// A projects root holding one clone whose origin matches the fixture org (`github.com/acme/`).
+function projectsRoot(origin = 'https://github.com/acme/app.git') {
+  const root = tmp();
+  const repo = path.join(root, 'app');
+  git(root, 'init', '-q', repo);
+  git(repo, 'remote', 'add', 'origin', origin);
+  return { root, repo };
+}
 const registry = (home) => JSON.parse(read(path.join(home, '.config/gutix/orgs.json')));
 
 test('link-org --branch clones that branch, installs it in Cursor with the org prefix, records it, no symlinks', () => {
   const org = bareRepo(orgFiles(), { 'develop-only.txt': 'x' });
   const home = tmp();
-  const r = gutix(home, ['link-org', org.url, '--branch', 'develop']);
+  const p = projectsRoot();
+  const r = gutix(home, ['link-org', org.url, '--branch', 'develop', '--projects-root', p.root]);
   assert.equal(r.status, 0, r.stderr);
 
   const [entry] = registry(home).orgs;
   assert.deepEqual({ name: entry.name, branch: entry.branch, git: entry.git }, { name: 'acme', branch: 'develop', git: org.url });
   assert.equal(entry.path, path.join(home, '.config/gutix/orgs/acme'));
   assert.ok(exists(path.join(entry.path, 'develop-only.txt')), 'the develop branch was cloned');
-  assert.match(read(path.join(home, '.cursor/plugins/local/acme/skills/acme-gamma/SKILL.md')), /^---\nname: acme-gamma\n/);
+  assert.match(read(path.join(p.repo, '.cursor/skills/acme-gamma/SKILL.md')), /^---\nname: acme-gamma\n/);
+  assert.ok(!exists(path.join(home, '.cursor')), 'an org plugin is never installed globally');
   assert.equal(walk(home).filter((p) => fs.lstatSync(p).isSymbolicLink()).length, 0);
   assert.deepEqual(fs.readdirSync(path.join(home, '.config/gutix/orgs')), ['acme'], 'no clone leftovers');
 });
@@ -159,10 +169,12 @@ test('install --org links the org with the flags given', () => {
   const home = tmp();
   const g = gutixFixture();
   const org = bareRepo(orgFiles(), { 'develop-only.txt': 'x' });
-  const r = gutix(home, ['install', '--cursor', '--org', org.url, '--branch', 'develop', '--auto-update', 'off'], { GUTIX_ROOT: g.checkout });
+  const p = projectsRoot();
+  const r = gutix(home, ['install', '--cursor', '--org', org.url, '--branch', 'develop', '--auto-update', 'off', '--projects-root', p.root], { GUTIX_ROOT: g.checkout });
   assert.equal(r.status, 0, r.stderr);
   assert.equal(registry(home).orgs[0].branch, 'develop');
-  assert.ok(exists(path.join(home, '.cursor/plugins/local/acme/skills/acme-gamma')));
+  assert.ok(exists(path.join(p.repo, '.cursor/skills/acme-gamma')));
+  assert.ok(!exists(path.join(home, '.cursor/plugins/local/acme')));
 });
 
 test('update pulls gutix and each org on its branch and regenerates the Cursor copies; a failing pull warns and exits 0', () => {
@@ -170,7 +182,8 @@ test('update pulls gutix and each org on its branch and regenerates the Cursor c
   const g = gutixFixture();
   const org = bareRepo(orgFiles(), { 'develop-only.txt': 'x' });
   const env = { GUTIX_ROOT: g.checkout };
-  assert.equal(gutix(home, ['install', '--cursor', '--org', org.url, '--branch', 'develop', '--auto-update', 'off'], env).status, 0);
+  const p = projectsRoot();
+  assert.equal(gutix(home, ['install', '--cursor', '--org', org.url, '--branch', 'develop', '--auto-update', 'off', '--projects-root', p.root], env).status, 0);
 
   git(org.work, 'checkout', '-q', 'develop');
   push(org, 'skills/delta/SKILL.md', skill('delta'));
@@ -178,7 +191,7 @@ test('update pulls gutix and each org on its branch and regenerates the Cursor c
   const r = gutix(home, ['update'], env);
   assert.equal(r.status, 0, r.stderr);
   assert.ok(exists(path.join(home, '.config/gutix/orgs/acme/skills/delta/SKILL.md')), 'org pulled on its branch');
-  assert.ok(exists(path.join(home, '.cursor/plugins/local/acme/skills/acme-delta/SKILL.md')), 'org Cursor copy regenerated');
+  assert.ok(exists(path.join(p.repo, '.cursor/skills/acme-delta/SKILL.md')), 'org copy regenerated in its repo');
   assert.ok(exists(path.join(home, '.cursor/plugins/local/gutix/skills/gutix-omega/SKILL.md')), 'gutix pulled and its copy regenerated');
 
   fs.renameSync(org.bare, `${org.bare}.gone`);
@@ -295,11 +308,12 @@ test('link-org refused by a foreign Cursor folder records nothing, and retrying 
   assert.ok(!exists(path.join(home, '.config/gutix/orgs/acme')), 'no clone left behind');
   assert.equal(read(path.join(foreign, 'hand-made.txt')), 'mine');
 
-  const retry = gutix(home, ['link-org', org.url, '--replace-port']);
+  const p = projectsRoot();
+  const retry = gutix(home, ['link-org', org.url, '--replace-port', '--projects-root', p.root]);
   assert.equal(retry.status, 0, retry.stderr);
   assert.deepEqual(registry(home).orgs.map((o) => o.name), ['acme']);
-  assert.ok(exists(path.join(foreign, 'skills/acme-gamma/SKILL.md')));
-  assert.ok(!exists(path.join(foreign, 'hand-made.txt')));
+  assert.ok(exists(path.join(p.repo, '.cursor/skills/acme-gamma/SKILL.md')));
+  assert.ok(!exists(foreign), 'the foreign folder was moved out of the global plugins');
   const backups = path.join(home, '.cache/gutix/cursor-backups');
   assert.equal(read(path.join(backups, fs.readdirSync(backups)[0], 'hand-made.txt')), 'mine');
 });

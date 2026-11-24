@@ -7,7 +7,7 @@ args:
     description: "What the e2e must prove, in the user's words (\"a member cannot see the platform tab\")."
     required: true
   - name: suite-dir
-    description: "Path of the e2e suite (default: the product-e2e checkout next to this repo)."
+    description: "Path of the e2e suite (default: the sibling checkout whose name ends in `-e2e`)."
     required: false
 ---
 

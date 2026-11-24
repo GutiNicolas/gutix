@@ -1,6 +1,11 @@
 # gutix
 
-Claude Code plugin with Nicolas' engineering workflows.
+Engineering workflows as skills for Claude Code, with a generated copy for Cursor: turn a requirement into a plan,
+build it in short sessions, review and verify it, and write up the design. They are opinionated, built for one
+person's daily work, and shared as they are.
+
+**Needs:** git, Node.js 22 or newer, and Google Chrome or Chromium for the skills that render pages (`design-doc`,
+`deck`, `ui-evidence`). macOS and Linux.
 
 | Skill | What it does |
 | --- | --- |
@@ -32,7 +37,7 @@ claude plugin install gutix@gutix
 claude plugin marketplace add <org>/<repo>#<branch>
 ```
 
-- The repos are private: you need read access, and git must be able to use your credentials (`gh auth setup-git`).
+- An org plugin's repo is often private: git must be able to use your credentials for it (`gh auth setup-git`).
 - Auto-update is per marketplace and off by default: turn it on in `/plugin`, under Marketplaces.
 - Working on gutix itself: `claude plugin marketplace add ~/projects/gutix`. After editing a skill, bump `version` in
   `.claude-plugin/plugin.json` and `marketplace.json`, then `claude plugin update gutix@gutix` and restart Claude Code.

@@ -421,19 +421,26 @@ function installIntoRepo({ repo, staged, skills, prefix, prev }) {
   const ex = addExclude(file, line); // before any file lands, so git never sees one
   if (ex.added) Object.assign(state, { excludeAdded: true, excludeCreated: ex.created, excludeNoEol: ex.noEol });
   const stage = path.join(skillsDir, `${prefix}.staging-${process.pid}`); // covered by the exclude pattern
-  fs.mkdirSync(skillsDir, { recursive: true });
   try {
-    for (const s of skills) {
-      copyTree(path.join(staged, s), path.join(stage, s), (t) => t);
-      fs.writeFileSync(path.join(stage, s, GENERATED), `${JSON.stringify({ generator: 'gutix' })}\n`);
+    fs.mkdirSync(skillsDir, { recursive: true });
+    try {
+      for (const s of skills) {
+        copyTree(path.join(staged, s), path.join(stage, s), (t) => t);
+        fs.writeFileSync(path.join(stage, s, GENERATED), `${JSON.stringify({ generator: 'gutix' })}\n`);
+      }
+      for (const old of prev?.skills || []) if (!skills.includes(old) && exists(path.join(skillsDir, old, GENERATED))) fs.rmSync(path.join(skillsDir, old), { recursive: true, force: true });
+      for (const s of skills) {
+        fs.rmSync(path.join(skillsDir, s), { recursive: true, force: true });
+        fs.renameSync(path.join(stage, s), path.join(skillsDir, s));
+      }
+    } finally {
+      fs.rmSync(stage, { recursive: true, force: true });
     }
-    for (const old of prev?.skills || []) if (!skills.includes(old) && exists(path.join(skillsDir, old, GENERATED))) fs.rmSync(path.join(skillsDir, old), { recursive: true, force: true });
-    for (const s of skills) {
-      fs.rmSync(path.join(skillsDir, s), { recursive: true, force: true });
-      fs.renameSync(path.join(stage, s), path.join(skillsDir, s));
-    }
-  } finally {
-    fs.rmSync(stage, { recursive: true, force: true });
+  } catch (e) {
+    // Leave the repo as this call found it: take back the exclude line it added and the folders it made.
+    if (ex.added) { try { removeExclude(file, line, ex); } catch { /* best effort */ } }
+    if (!prev) { if (state.skillsDirCreated) rmdirIfEmpty(skillsDir); if (state.cursorCreated) rmdirIfEmpty(path.join(repo, '.cursor')); }
+    throw e;
   }
   return { path: repo, skills: skills.slice(), ...Object.fromEntries(Object.entries(state).filter(([k]) => k !== 'path' && k !== 'skills')) };
 }

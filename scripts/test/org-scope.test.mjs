@@ -261,3 +261,15 @@ test('unlink-org keeps the org folder when it has a commit that is not on its up
   assert.ok(exists(path.join(dir, 'skills/gamma/extra.md')), 'unpushed commit survives');
   assert.match(r.stdout + r.stderr, /was kept/);
 });
+
+test('a repo whose copy fails on the first install is left as it was: no exclude line, no folders', () => {
+  const f = fixture();
+  write(path.join(f.match, '.cursor'), 'not a folder'); // .cursor is a file, so the skills folder cannot be made
+  const before = snapshot(f.match);
+  const r = gutix(f.home, ['link-org', f.org.url, '--projects-root', f.root]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stderr, new RegExp(f.match.replace(/[/.]/g, '.')));
+  assert.deepEqual(snapshot(f.match), before);
+  assert.equal(gutix(f.home, ['unlink-org', 'acme']).status, 0);
+  assert.deepEqual(snapshot(f.match), before);
+});

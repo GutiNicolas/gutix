@@ -2,10 +2,11 @@
 // Chrome tests skip, with a message, when no Chrome or no Playwright deps are found (as render.test.mjs does).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import http from 'node:http';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { findChrome } from '../render.mjs';
@@ -120,6 +121,28 @@ test('a failed redraw removes the old Dxx.svg instead of leaving a stale drawing
   assert.match(r.stderr, /D01\.html: .*kaput/);
   assert.match(r.stderr, /removed the old D01\.svg/);
   assert.equal(fs.existsSync(path.join(dir, 'D01.svg')), false);
+});
+
+test('fonts that never load: the figure still draws, and the warning names it', { skip }, async () => {
+  // a font server that holds the request for 6 s, longer than the kit's 4 s cap (the page's load waits for it, still well under draw's 30 s)
+  const server = http.createServer((req, res) => { setTimeout(() => res.destroy(), 6000).unref(); });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const dir = figsDir(['<title>Slow</title><div id="canvas"></div><script>K.draw(() => { K.svg(300, 100); K.text(10, 40, "label", { size: 14 }); });</script>']);
+    const theme = path.join(path.dirname(dir), 'theme.css');
+    const tokens = 'ink:#111;muted:#666;line:#ddd;soft:#f5f5f5;accent:#0a0a0a;accent-soft:#fc0;warn:#a50;warn-soft:#fed;ok:#173;ok-soft:#dfe;bad:#c22;bad-soft:#fdd;font-sans:sans-serif'.split(';').map((d) => `--${d};`).join('');
+    fs.writeFileSync(theme, `@font-face{font-family:Slow;src:url(http://127.0.0.1:${server.address().port}/slow.woff2)}\n:root{${tokens}--font-mono:Slow,monospace}`);
+    // async spawn: the test's own event loop has to keep serving the font request while draw.mjs runs
+    const r = await new Promise((resolve) => {
+      const child = spawn('node', [path.join(SCRIPTS, 'draw.mjs'), dir, '--theme', theme]);
+      let stderr = '';
+      child.stderr.on('data', (d) => { stderr += d; });
+      child.on('close', (status) => resolve({ status, stderr }));
+    });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stderr, /draw: D01: fonts not loaded after 4 s, text measured with fallback fonts/);
+    assert.ok(fs.existsSync(path.join(dir, 'D01.svg')));
+  } finally { server.close(); server.closeAllConnections(); }
 });
 
 test('checkSvg flags on* attributes, non-fragment hrefs and url() outside #fragment, and lets fragments through', () => {

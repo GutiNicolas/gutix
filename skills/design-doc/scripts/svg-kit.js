@@ -96,7 +96,9 @@
 			const f = fontFamilies();
 			const loads = [];
 			for (const w of [400, 500, 600, 700]) for (const fam of [f.sans, f.mono]) loads.push(document.fonts.load(`${w} 14px ${fam}`).catch(() => {}));
-			await Promise.race([Promise.all(loads), new Promise((r) => setTimeout(r, 4000))]);
+			// When the cap wins, text is measured with fallback fonts; draw.mjs warns through window.__fontsTimedOut.
+			const loaded = await Promise.race([Promise.all(loads).then(() => true), new Promise((r) => setTimeout(() => r(false), 4000))]);
+			if (!loaded) window.__fontsTimedOut = true;
 			await fn();
 			finish(opts);
 		} catch (e) {

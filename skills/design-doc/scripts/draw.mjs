@@ -103,6 +103,7 @@ async function main(argv) {
         ]);
         const error = await page.evaluate(() => window.__error);
         if (error) throw new Error(error);
+        if (await page.evaluate(() => window.__fontsTimedOut === true)) console.error(`draw: ${id}: fonts not loaded after 4 s, text measured with fallback fonts`);
         const svg = await page.evaluate(() => document.querySelector('svg')?.outerHTML ?? '');
         const problems = checkSvg(svg);
         if (problems.length) throw new Error(problems.join('; '));

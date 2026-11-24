@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.15.0
+
+- An org plugin linked with `link-org` now loads in Cursor only inside clones whose `origin` matches its profile: the
+  copy goes to `<repo>/.cursor/skills/`, hidden through `.git/info/exclude`, and nothing is installed globally.
+  `update` re-runs the sweep; new command `unlink-org` (or `link-org --remove`) undoes it; `--projects-root` says where
+  the clones are. An org linked earlier is migrated on the next update.
+- The daily update no longer removes an org's skills when none of your clones match: it keeps the old copy and warns,
+  pointing to `--projects-root`. `link-org` and `update` exit 1 when a repo could not be updated, a repo is updated all
+  or nothing, `unlink-org` keeps an org folder that has unpushed commits, and a skill a teammate adds by hand with the
+  org prefix is no longer hidden from git.
+
 ## 0.14.0
 
 - New skill `e2e-add-check`: adds a check to a user-facing flow in the org's e2e suite starting from the suite's catalog

@@ -19,12 +19,12 @@ export function normalizeRemote(url) {
   return u.replace(/\.git$/i, '').replace(/\/+$/, '').toLowerCase();
 }
 
-function remoteOf(dir) {
+export function remoteOf(dir) {
   const r = spawnSync('git', ['-C', dir, 'remote', 'get-url', 'origin'], { encoding: 'utf8', timeout: 5000 });
   return r.status === 0 ? r.stdout.trim() : '';
 }
 
-function prefixMatches(remote, match) {
+export function prefixMatches(remote, match) {
   const m = normalizeRemote(match);
   if (!m) return false;
   if (!remote.startsWith(m)) return false;

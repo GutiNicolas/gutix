@@ -65,9 +65,27 @@ comparing a repo's `origin` with the profile's `match`; the order is the repo's 
 gutix's defaults.
 
 ```bash
-scripts/gutix.mjs link-org <git-url> [--branch <b>]   # clone an org repo, install it in Cursor, record it
+scripts/gutix.mjs link-org <git-url> [--branch <b>] [--projects-root <dir>]...   # clone an org repo, copy it into its repos, record it
+scripts/gutix.mjs unlink-org <name>                   # undo that: remove the copies and the exclude lines (link-org --remove <name> does the same)
 scripts/gutix.mjs new-org <name>                      # or start a personal profile in ~/.config/gutix/orgs/<name>/
 ```
+
+#### An org plugin loads only in its org's repos
+
+An org that is also a plugin (it has `.claude-plugin/plugin.json` and its profile has `match`) is never installed
+globally, and not in Claude. In Cursor its skills are copied into `<repo>/.cursor/skills/<prefix><skill>/` of each clone
+whose `origin` matches the profile, so outside those repos none of its skills or descriptions load.
+
+- **Which clones:** git clones under your projects root, `~/projects` by default (`--projects-root <dir>`, repeatable;
+  gutix remembers it). It looks two folders deep and skips hidden folders and `node_modules`.
+- **Nothing is committed:** gutix adds one line per generated skill (`.cursor/skills/<prefix><skill>/`) to the repo's
+  `.git/info/exclude`, never to a tracked `.gitignore`, so a skill a teammate adds by hand stays visible to git. A folder
+  in `.cursor/skills/` that gutix did not generate is never overwritten.
+- **Keeping it current:** the update re-runs this: new matching clones get the plugin, and a clone that no longer
+  matches or is gone is reported and left as it is. `unlink-org` removes the copies and the lines it added.
+- **If you linked an org before this:** the next update removes its global copy (backed up to
+  `~/.cache/gutix/cursor-backups/`) and copies it into the matching clones.
+- An org plugin whose profile has no `match` is not copied anywhere: add the `match` first.
 
 ### Update
 
@@ -75,7 +93,7 @@ scripts/gutix.mjs new-org <name>                      # or start a personal prof
 ~/projects/gutix/scripts/gutix-update
 ```
 
-Pulls gutix and every linked org, then regenerates the Cursor copies. For an automatic daily update, answer yes to the
+Pulls gutix and every linked org, then regenerates the Cursor copies (an org plugin's in each matching clone). For an automatic daily update, answer yes to the
 install question, or put `{"autoUpdate": "daily"}` in `~/.config/gutix/config.json`: a Claude Code `SessionStart` hook
 then runs it at most once a day, silently, and never fails the session. Without that setting the hook does nothing.
 Cursor has no equivalent wired in, so there the update stays manual.

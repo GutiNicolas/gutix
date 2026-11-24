@@ -31,6 +31,14 @@ export function checkSvg(svg) {
   if (!/<text\b/i.test(svg)) problems.push('the drawing has no <text>');
   if (/<script\b/i.test(svg)) problems.push('the drawing contains a <script>');
   if (/<foreignObject\b/i.test(svg)) problems.push('the drawing contains a <foreignObject>');
+  // Active or external content, looked for inside tags only (a label may say "href=" in plain text).
+  const tags = [...svg.matchAll(/<[a-z][^>]*>/gi)].map((m) => m[0]);
+  if (tags.some((t) => /\son[a-z]+\s*=/i.test(t))) problems.push('the drawing has an on* event attribute');
+  const fragment = (v) => v.trim().startsWith('#');
+  const hrefs = tags.flatMap((t) => [...t.matchAll(/\s(?:xlink:)?href\s*=\s*(?:"([^"]*)"|'([^']*)')/gi)].map((m) => m[1] ?? m[2]));
+  if (hrefs.some((v) => !fragment(v))) problems.push('the drawing has an href that is not a #fragment');
+  const urls = tags.flatMap((t) => [...t.matchAll(/url\(\s*(?:&quot;|["'])?\s*([^)]*)\)/gi)].map((m) => m[1]));
+  if (urls.some((v) => !fragment(v))) problems.push('the drawing has a url() that is not a #fragment');
   return problems;
 }
 

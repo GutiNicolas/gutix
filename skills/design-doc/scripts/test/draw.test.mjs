@@ -94,6 +94,29 @@ test('a source that reads the network or the disk gets nothing, and a script err
   assert.match(fs.readFileSync(path.join(dir, 'D01.svg'), 'utf8'), /blocked/);
 });
 
+test('a drawing with active or external content is refused and nothing is written for it', { skip }, () => {
+  const shapes = {
+    onload: 'root.setAttribute("onload", "alert(1)")',
+    'javascript href': 'const a = document.createElementNS("http://www.w3.org/2000/svg", "a"); a.setAttribute("href", "javascript:alert(1)"); root.appendChild(a)',
+    'external image': 'const i = document.createElementNS("http://www.w3.org/2000/svg", "image"); i.setAttribute("href", "https://example.com/x.png"); root.appendChild(i)',
+    'external url()': 'const r = document.createElementNS("http://www.w3.org/2000/svg", "rect"); r.setAttribute("fill", "url(https://example.com/p.svg#x)"); root.appendChild(r)'
+  };
+  const source = (inject) => `<title>Active</title><div id="canvas"></div><script>K.draw(() => { K.svg(300, 100); const root = document.querySelector("svg"); K.text(10, 40, "label", { size: 14 }); ${inject}; });</script>`;
+  const dir = figsDir(Object.values(shapes).map(source));
+  const r = run('draw.mjs', [dir]);
+  assert.equal(r.status, 1, r.stderr);
+  assert.equal(fs.readdirSync(dir).filter((f) => f.endsWith('.svg')).length, 0, 'no svg written');
+  assert.equal(r.stderr.trim().split('\n').length, Object.keys(shapes).length, r.stderr);
+});
+
+test('checkSvg flags on* attributes, non-fragment hrefs and url() outside #fragment, and lets fragments through', () => {
+  const wrap = (inner) => `<svg viewBox="0 0 1 1"><title>x</title><text>a</text>${inner}</svg>`;
+  for (const bad of ['<g onload="x()"/>', '<rect onclick = "x()"/>', '<a href="javascript:x()"/>', '<a xlink:href="data:text/html,x"/>', '<image href="https://e.test/a.png"/>', '<image href="a.png"/>', '<rect fill="url(https://e.test/p)"/>', '<rect fill="url(\'a.svg#p\')"/>']) {
+    assert.ok(checkSvg(wrap(bad)).length > 0, bad);
+  }
+  assert.deepEqual(checkSvg(wrap('<use href="#a"/><use xlink:href="#b"/><rect fill="url(#g)" clip-path="url(&quot;#c&quot;)"/><text>onload= and href="x" as words</text>')), []);
+});
+
 test('the theme decides the look: the SVG keeps var(--token) and the page gets the theme', () => {
   const css = ':root{--ink:#111;--muted:#666;--line:#ddd;--soft:#f5f5f5;--accent:#0a0a0a;--accent-soft:#ffcc00;--warn:#a50;--warn-soft:#fed;--ok:#173;--ok-soft:#dfe;--bad:#c22;--bad-soft:#fdd;--font-sans:sans-serif;--font-mono:monospace}';
   const html = pageOf('<html><head><title>t</title></head><body></body></html>', { preamble: '@import url("https://x.test/f.css");', root: css.slice(0) });

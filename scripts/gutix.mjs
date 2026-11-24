@@ -398,12 +398,12 @@ function addExclude(file, line) {
 }
 function removeExclude(file, line, { created, noEol }) {
   if (!exists(file)) return;
-  const lines = fs.readFileSync(file, 'utf8').split('\n');
-  const i = lines.indexOf(line);
-  if (i < 0) return;
-  lines.splice(i, 1);
-  let text = lines.join('\n');
-  if (noEol && text.endsWith('\n')) text = text.slice(0, -1);
+  const orig = fs.readFileSync(file, 'utf8');
+  if (!orig.split('\n').includes(line)) return;
+  let text;
+  // The newline we added before our line goes with it, but only while the file still ends exactly with our line.
+  if (noEol && orig.endsWith(`\n${line}\n`)) text = orig.slice(0, -(line.length + 2));
+  else { const lines = orig.split('\n'); lines.splice(lines.indexOf(line), 1); text = lines.join('\n'); }
   if (created && text.trim() === '') fs.rmSync(file, { force: true }); else fs.writeFileSync(file, text);
 }
 

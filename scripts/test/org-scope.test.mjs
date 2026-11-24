@@ -294,3 +294,12 @@ test('a failure in the middle of the per-repo swap leaves every skill exactly as
   assert.equal(gutix(f.home, ['update']).status, 0);
   assert.match(read(path.join(f.match, '.cursor/skills/acme-gamma/SKILL.md')), /new version/, 'a later update succeeds');
 });
+
+test('unlink-org does not eat a trailing newline the user added after our exclude line', () => {
+  const f = fixture();
+  fs.writeFileSync(excludeOf(f.match), '*.log'); // no trailing newline: gutix has to restore this ending
+  assert.equal(gutix(f.home, ['link-org', f.org.url, '--projects-root', f.root]).status, 0);
+  fs.appendFileSync(excludeOf(f.match), '# later\n');
+  assert.equal(gutix(f.home, ['unlink-org', 'acme']).status, 0);
+  assert.equal(read(excludeOf(f.match)), '*.log\n# later\n');
+});

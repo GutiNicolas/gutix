@@ -224,3 +224,19 @@ test('an org plugin whose profile has no match is copied nowhere, with a notice'
   assert.deepEqual(skillDirs(f.match), []);
   assert.ok(!exists(path.join(f.home, '.cursor')));
 });
+
+test('update with no matching clone keeps a legacy global copy and says so, even when quiet', () => {
+  const f = fixture();
+  assert.equal(gutix(f.home, ['link-org', f.org.url, '--no-cursor']).status, 0);
+  const empty = tmp(); // projects root with no clone of the org
+  const reg = registry(f.home);
+  reg.orgs[0].projectsRoots = [empty];
+  write(path.join(f.home, '.config/gutix/orgs.json'), JSON.stringify(reg));
+  const old = path.join(f.home, '.cursor/plugins/local/acme');
+  write(path.join(old, 'skills/acme-gamma/SKILL.md'), 'old');
+  write(path.join(old, '.gutix-cursor.json'), JSON.stringify({ plugin: 'acme', prefix: 'acme-', skills: ['acme-gamma'], agents: [] }));
+  const r = gutix(f.home, ['update', '--daily']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(exists(path.join(old, 'skills/acme-gamma/SKILL.md')), 'global copy kept');
+  assert.match(r.stderr, /--projects-root/);
+});

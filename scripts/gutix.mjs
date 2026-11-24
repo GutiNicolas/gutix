@@ -488,11 +488,11 @@ function sweepOrg(entry, { roots, quiet = false, replacePort = false } = {}) {
   for (const [p, st] of prevByPath) {
     if (!matches.includes(p)) { warn(`${entry.name}: ${p} no longer matches or is gone; its copy is left as it is (gutix unlink-org removes it)`); repos.push(st); }
   }
-  if (!matches.length) say(`${entry.name}: no clone under ${useRoots.join(', ')} has an origin that matches ${profile.match.join(', ')}`);
+  if (!repos.length) warn(`${entry.name}: no clone under ${useRoots.join(', ')} has an origin that matches ${profile.match.join(', ')}; any earlier global copy is kept. Point gutix at your clones with --projects-root <dir>`);
   Object.assign(entry, { prefix, cursor: 'repos', repos });
   const target = path.join(home(), '.cursor/plugins/local', meta.name);
   if (replacePort && exists(target) && !exists(path.join(target, MANIFEST))) say(`backed up ${target} to ${backupTarget(target, meta.name)}`);
-  retireGlobalCopy(meta.name, say);
+  if (repos.length) retireGlobalCopy(meta.name, say); // never take the skills away before they are somewhere else
 }
 
 function unlinkOrg(name) {

@@ -421,6 +421,7 @@ function installIntoRepo({ repo, staged, skills, prefix, prev }) {
   const ex = addExclude(file, line); // before any file lands, so git never sees one
   if (ex.added) Object.assign(state, { excludeAdded: true, excludeCreated: ex.created, excludeNoEol: ex.noEol });
   const stage = path.join(skillsDir, `${prefix}.staging-${process.pid}`); // covered by the exclude pattern
+  const backup = path.join(skillsDir, `${prefix}.backup-${process.pid}`);
   try {
     fs.mkdirSync(skillsDir, { recursive: true });
     try {
@@ -428,11 +429,22 @@ function installIntoRepo({ repo, staged, skills, prefix, prev }) {
         copyTree(path.join(staged, s), path.join(stage, s), (t) => t);
         fs.writeFileSync(path.join(stage, s, GENERATED), `${JSON.stringify({ generator: 'gutix' })}\n`);
       }
-      for (const old of prev?.skills || []) if (!skills.includes(old) && exists(path.join(skillsDir, old, GENERATED))) fs.rmSync(path.join(skillsDir, old), { recursive: true, force: true });
-      for (const s of skills) {
-        fs.rmSync(path.join(skillsDir, s), { recursive: true, force: true });
-        fs.renameSync(path.join(stage, s), path.join(skillsDir, s));
+      // All or nothing: current generated folders (and ones no longer generated) move aside, the staged ones move in,
+      // and any failure puts the old ones back. The backup is deleted only after everything succeeded.
+      const aside = [...new Set([...skills, ...(prev?.skills || [])])].filter((s) => exists(path.join(skillsDir, s, GENERATED)));
+      const moved = [];
+      const installed = [];
+      try {
+        fs.mkdirSync(backup, { recursive: true });
+        for (const s of aside) { fs.renameSync(path.join(skillsDir, s), path.join(backup, s)); moved.push(s); }
+        for (const s of skills) { fs.renameSync(path.join(stage, s), path.join(skillsDir, s)); installed.push(s); }
+      } catch (e) {
+        for (const s of installed) fs.rmSync(path.join(skillsDir, s), { recursive: true, force: true });
+        for (const s of moved) fs.renameSync(path.join(backup, s), path.join(skillsDir, s));
+        rmdirIfEmpty(backup); // only once everything is back
+        throw e;
       }
+      fs.rmSync(backup, { recursive: true, force: true });
     } finally {
       fs.rmSync(stage, { recursive: true, force: true });
     }

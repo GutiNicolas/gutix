@@ -273,3 +273,22 @@ test('a repo whose copy fails on the first install is left as it was: no exclude
   assert.equal(gutix(f.home, ['unlink-org', 'acme']).status, 0);
   assert.deepEqual(snapshot(f.match), before);
 });
+
+test('a failure in the middle of the per-repo swap leaves every skill exactly as before', () => {
+  const f = fixture();
+  assert.equal(gutix(f.home, ['link-org', f.org.url, '--projects-root', f.root]).status, 0);
+  write(path.join(f.org.work, 'skills/gamma/SKILL.md'), skill('gamma') + '\nnew version\n');
+  write(path.join(f.org.work, 'skills/delta/SKILL.md'), skill('delta') + '\nnew version\n');
+  git(f.org.work, 'add', '-A'); git(f.org.work, 'commit', '-q', '-m', 'v2'); git(f.org.work, 'push', '-q', 'origin', 'main');
+  const before = snapshot(path.join(f.match, '.cursor'));
+  const stuck = path.join(f.match, '.cursor/skills/acme-gamma'); // a folder that cannot be moved: the swap fails after acme-delta moved
+  fs.chmodSync(stuck, 0o555);
+  try {
+    const r = gutix(f.home, ['update']);
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stderr, /acme/);
+    assert.deepEqual(snapshot(path.join(f.match, '.cursor')), before);
+  } finally { fs.chmodSync(stuck, 0o755); }
+  assert.equal(gutix(f.home, ['update']).status, 0);
+  assert.match(read(path.join(f.match, '.cursor/skills/acme-gamma/SKILL.md')), /new version/, 'a later update succeeds');
+});

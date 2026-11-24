@@ -516,7 +516,11 @@ function unlinkOrg(name) {
   }
   reg.orgs = reg.orgs.filter((o) => o !== entry);
   writeJson(registryFile(), reg);
-  const cloned = entry.git && path.dirname(path.resolve(entry.path)) === orgsDir() && isDir(entry.path) && git(['status', '--porcelain'], { cwd: entry.path }).out === '';
+  // Only a clone with nothing to lose is deleted: no local edits, and every commit is on its upstream (none upstream: kept).
+  const nothingToLose = () => git(['status', '--porcelain'], { cwd: entry.path }).out === ''
+    && git(['rev-parse', '--abbrev-ref', '@{u}'], { cwd: entry.path }).ok
+    && git(['rev-list', '--count', '@{u}..HEAD'], { cwd: entry.path }).out === '0';
+  const cloned = entry.git && path.dirname(path.resolve(entry.path)) === orgsDir() && isDir(entry.path) && nothingToLose();
   if (cloned) { fs.rmSync(entry.path, { recursive: true, force: true }); note(`unlinked org ${name}`); } else note(`unlinked org ${name}; its folder ${entry.path} was kept`);
 }
 

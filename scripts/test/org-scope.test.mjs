@@ -249,3 +249,15 @@ test('link-org does not suggest the Claude marketplace for a plugin scoped to re
   assert.equal(r.status, 0, r.stderr);
   assert.doesNotMatch(r.stdout + r.stderr, /plugin marketplace add/);
 });
+
+test('unlink-org keeps the org folder when it has a commit that is not on its upstream', () => {
+  const f = fixture();
+  assert.equal(gutix(f.home, ['link-org', f.org.url, '--projects-root', f.root]).status, 0);
+  const dir = registry(f.home).orgs[0].path;
+  write(path.join(dir, 'skills/gamma/extra.md'), 'local work');
+  git(dir, 'add', '-A'); git(dir, 'commit', '-q', '-m', 'local');
+  const r = gutix(f.home, ['unlink-org', 'acme']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(exists(path.join(dir, 'skills/gamma/extra.md')), 'unpushed commit survives');
+  assert.match(r.stdout + r.stderr, /was kept/);
+});

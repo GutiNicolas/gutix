@@ -134,6 +134,21 @@ test('the draw sandbox cannot read a file outside the figs folder, by fetch or b
   assert.notEqual(background, 'rgb(1, 2, 3)', 'the file stylesheet was applied');
 });
 
+test('the draw sandbox lets through only the theme\'s own stylesheet hosts: a source\'s <link> or @import elsewhere is aborted', { skip }, async () => {
+  const { chromium } = loadPlaywright();
+  const browser = await chromium.launch({ executablePath: findChrome() });
+  try {
+    const page = await sandboxedPage(browser, {}, { scripts: true, stylesheetHosts: ['fonts.theme-probe.invalid'] });
+    const failures = new Map();
+    page.on('requestfailed', (r) => failures.set(r.url(), r.failure().errorText));
+    await page.setContent('<html><head><link rel="stylesheet" href="https://fonts.theme-probe.invalid/css?family=X"><link rel="stylesheet" href="https://leak.other-probe.invalid/?q=secret"><style>@import url("https://import.other-probe.invalid/y.css");</style></head><body></body></html>', { waitUntil: 'load' });
+    // the theme's host is let through (it fails only because it does not resolve); everything else is aborted by the route
+    assert.equal(failures.get('https://fonts.theme-probe.invalid/css?family=X'), 'net::ERR_NAME_NOT_RESOLVED');
+    assert.equal(failures.get('https://leak.other-probe.invalid/?q=secret'), 'net::ERR_FAILED');
+    assert.equal(failures.get('https://import.other-probe.invalid/y.css'), 'net::ERR_FAILED');
+  } finally { await browser.close(); }
+});
+
 test('a drawing with active or external content is refused and nothing is written for it', { skip }, () => {
   const shapes = {
     onload: 'root.setAttribute("onload", "alert(1)")',

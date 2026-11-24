@@ -6,7 +6,7 @@
 // The SVG has a viewBox, a <title> (the source's <title>), real <text>, no script and no foreignObject, and its
 // colours and fonts are still var(--token), so the doc's theme (and render.mjs) decide how it looks.
 // The theme resolves like theme.mjs does. Only the source's own inline script runs: every request except inline
-// data, fonts and https stylesheets (the theme's @import of a font css) is refused, like render.mjs does for untrusted input.
+// data, fonts and the https stylesheets the theme imports (its font css) is refused, like render.mjs does for untrusted input.
 // Exit codes: 0 ok, 1 a figure failed to draw, 2 usage or setup error. Playwright deps: see setup.sh.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -76,6 +76,8 @@ async function main(argv) {
   let theme;
   try { theme = resolveTheme({ theme: opts.theme, startDir: isDir ? input : path.dirname(input) }); } catch (e) { console.error(`draw: ${e.message}`); return 2; }
   const kit = fs.readFileSync(KIT, 'utf8');
+  // The only stylesheets a source may load are the ones the theme imports (its font css).
+  const stylesheetHosts = [...(theme.preamble ?? '').matchAll(/@import\s+(?:url\(\s*)?["']?(https:\/\/[^"')\s;]+)/gi)].map((m) => new URL(m[1]).hostname);
 
   const { chromium } = loadPlaywright();
   let browser;
@@ -88,7 +90,7 @@ async function main(argv) {
       const out = path.join(path.dirname(file), `${id}.svg`);
       // The kit is a context init script, so it is in place before the source's own script runs.
       const init = `window.__FIG = ${JSON.stringify(id)};\n${kit}`;
-      const page = await sandboxedPage(browser, { viewport: { width: 1280, height: 900 } }, { scripts: true, init });
+      const page = await sandboxedPage(browser, { viewport: { width: 1280, height: 900 } }, { scripts: true, init, stylesheetHosts });
       try {
         // An uncaught error in the source's own script fails the figure at once instead of waiting for the timeout.
         let crash;

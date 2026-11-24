@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.0
+
+- New skill `e2e-add-check`: adds a check to a user-facing flow in the org's e2e suite starting from the suite's catalog
+  (fixture, helper, tag), extending the flow's spec, with the test's own data, running only the affected tag.
+
 ## 0.13.0
 
 - New skill `deck`: a self-contained HTML slide deck that explains a technical flow or change, researched fresh from

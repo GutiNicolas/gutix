@@ -17,6 +17,7 @@ Claude Code plugin with Nicolas' engineering workflows.
 | `gutix:design-doc` | Writes a design doc from decisions already taken: an HTML for people (browser, PDF) with inline SVG diagrams and a generated `<name>.llm.md` twin that agents read at about a third of the tokens. Writer and diagram subagents, a contradictions review against the code, a checker (`check-doc.mjs`), and routing (first-line pointer, `AGENTS.md` line, `extract-llm.mjs --check`). |
 | `gutix:deck` | Builds a self-contained HTML slide deck that explains a technical flow or change, researched fresh from the repo (code over config over ticket, every number tagged read, inferred or measured), in the org's theme, and exports it to PDF with the shared renderer. |
 | `gutix:ui-evidence` | Proves a UI change with screenshots: tours the screens on mobile and desktop before and after, measures the primary CTA, and composes BEFORE \| AFTER images to attach to a ticket or PR. |
+| `gutix:e2e-add-check` | Adds a check to a user-facing flow in the org's e2e suite starting from what exists: reads the suite's catalog, picks the fixture, helper and tag, extends the spec of that flow (a new spec only for a new flow), keeps data to the test's own people, and runs only the affected tag through the runner. |
 
 ## Install
 

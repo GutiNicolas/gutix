@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.16.0
+
+- design-doc draws diagrams with a kit instead of hand-typed coordinates: `scripts/svg-kit.js` (shapes that return their
+  geometry, computed links, text measured with the theme's fonts, a 13 px text minimum) and eight templates in
+  `references/diagrams/` (architecture, class, data, ER, state, flow, rollout, sequence). `scripts/draw.mjs <slug>-figs/`
+  runs each `Dxx.html` in Chrome with the doc's theme and writes a static `Dxx.svg` whose colours and fonts are still
+  theme tokens, so inline, check, twin and PNG export are unchanged. Drawing an SVG by hand stays allowed. A drawing
+  with event attributes, links or `url()` outside the file is refused, a source cannot load stylesheets beyond the
+  theme's font css, a failed redraw removes the old `Dxx.svg`, and `draw.mjs` warns when the theme fonts did not load.
+
 ## 0.15.0
 
 - An org plugin linked with `link-org` now loads in Cursor only inside clones whose `origin` matches its profile: the

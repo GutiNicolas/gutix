@@ -1,0 +1,43 @@
+<!--
+  State: states, transitions, a start and an end, inside a frame.
+  Use when: the doc defines the life of one record or entity: its states, what moves it, and what happens to repeated or late events.
+  How: copy this file to <slug>-figs/Dxx.html (Dxx = the figure's id), replace the example content, then run
+  node <skill>/scripts/draw.mjs <slug>-figs/   to write Dxx.svg next to it. The drawing script runs in Chrome with
+  svg-kit.js and the doc's theme already loaded: use K.* (see the header of scripts/svg-kit.js), never colours or fonts.
+  The <title> below becomes the SVG <title>: one sentence that says what the diagram shows.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>A row starts in the pending state, becomes confirmed on a payment event, and a late event on a cancelled row is ignored</title>
+</head>
+<body>
+<div id="canvas"></div>
+<script>
+K.draw(() => {
+	const { svg, box, zone, text, start, end, link, selfLoop, legend } = K;
+	svg(900, 400);
+
+	const state = (x, y, name, details, opts = {}) => box(x, y, 200, 66, { title: name, lines: details, titleSize: 14.5, ...opts });
+
+	const frame = zone(230, 0, 640, 300, 'Row of table `orders`', { fill: K.C.paper, stroke: K.C.lineStrong, dash: '6 4' });
+	const s0 = start(40, 210);
+	text(54, 240, 'no row', { size: 13.5, weight: 600 });
+
+	const a = state(250, 170, 'PENDING', ['`status = pending`'], { kind: 'new' });
+	const t = state(250, 40, 'CANCELLED', ['`status = cancelled`'], { kind: 'plain', dash: '6 4' });
+	const b = state(620, 170, 'CONFIRMED', ['`status = confirmed`'], { kind: 'plain' });
+	const fin = end(550, 360);
+
+	link(s0, a, { label: ['order created', '`INSERT`'] });
+	link(s0, t, { from: 't', to: 'l', label: ['cancel arrives', 'before the order'] });
+	link(a, b, { label: ['`PAYMENT`:', 'confirm'] });
+	selfLoop(t, ['order arrives:', 'row is kept']);
+	link(frame, fin, { label: ['retention:', '`DROP PARTITION`'], labelSide: 'right' });
+
+	legend([['new', 'Main state'], ['tombstone', 'Tombstone: marks a row that must not come back'], 'dup']);
+});
+</script>
+</body>
+</html>

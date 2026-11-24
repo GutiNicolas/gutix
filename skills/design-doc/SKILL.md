@@ -47,7 +47,7 @@ Write the brief once and give it to both subagents:
 - For the writer: the decisions with their why, the numbers with their source, the structure in
   [references/structure.md](references/structure.md), the page in [references/template.html](references/template.html)
   (keep its `<style>` and components), and the rules below.
-- Output: `docs/design/<slug>.html` and `docs/design/<slug>-figs/Dxx.svg`.
+- Output: `docs/design/<slug>.html` and `docs/design/<slug>-figs/Dxx.svg` (drawn with the kit, see Diagrams).
 
 Writing rules:
 - Each section opens with its main idea in one or two sentences, then the detail.
@@ -57,11 +57,41 @@ Writing rules:
 - Estimates say how they were computed; one unit per quantity (GB or GiB, not both).
 - Code blocks carry their language (`<code class="language-sql">`); tables keep the same column count in every row.
 - Each figure: a caption `Figure N. What it shows, in one sentence.`, numbered in order.
-- Diagrams: one standalone `<svg>` per file with a `viewBox`, a `<title>` that says what the diagram shows (it is
+- Diagrams: drawn with the kit (Diagrams below), or by hand: one standalone `<svg>` per file with a `viewBox`, a `<title>` that says what the diagram shows (it is
   all a model reads of the drawing, with the text labels), every label as real `<text>` (never paths), the colours
   of the template's `:root`, and unique ids (prefix marker ids with the figure id).
 - The writer's final report puts **contradictions between sources and code first**, then every
   "(not verified in code)" claim.
+
+## Diagrams
+
+The diagram author does not type coordinates. For each `Dxx` it picks the template for the kind of diagram from
+[references/diagrams/](references/diagrams/), copies it to `docs/design/<slug>-figs/Dxx.html`, replaces the example
+content, and runs the draw step:
+
+| Template | Use it for |
+| --- | --- |
+| `architecture.html` | components in lanes, what is new next to what exists, queues and stores |
+| `class.html` | packages as lanes, class cards, who depends on whom |
+| `data.html` | a bar chart of an estimate against a budget or a limit |
+| `er.html` | tables with keys and a logical relation |
+| `state.html` | the states of one record, its transitions, duplicates and late events |
+| `flow.html` | a process with decisions and an error path |
+| `rollout.html` | phases and milestones on a day-by-day timeline |
+| `sequence.html` | one scenario across components over time, with notes and alternatives |
+
+```bash
+node <skill>/scripts/draw.mjs docs/design/<slug>-figs/ [--theme <css>]   # every Dxx.html -> Dxx.svg next to it
+```
+
+The kit ([scripts/svg-kit.js](scripts/svg-kit.js)) computes geometry: shapes return their position (`left()`, `right()`,
+`top()`, `bottom()`), `link()` routes the arrows, boxes size to their text measured with the theme's real fonts, and
+`code` between backticks is drawn in the mono font. The `<title>` of the source is the SVG's `<title>`: write one
+sentence that says what the diagram shows. Colours and fonts are theme tokens (`var(--accent)`, `var(--font-sans)`):
+never write a literal one. The kit refuses text below 13 px and names the label; a failed figure is reported with its
+file and the others still draw. The sources run in Chrome with scripts only from the source itself and no network but
+the theme's fonts (Chrome setup as in Publish). Then `inline-figures.mjs` pastes the SVGs (step 5). Drawing an SVG by
+hand stays allowed when no template fits: same rules (`viewBox`, `<title>`, real `<text>`, tokens, prefixed ids).
 
 ## 3. Write
 
@@ -85,8 +115,8 @@ node <skill>/scripts/extract-llm.mjs docs/design/<slug>.html      # writes <slug
 node <skill>/scripts/check-doc.mjs docs/design/<slug>.html        # OK, or every problem
 ```
 
-`<skill>` is this skill's folder. Delete `<slug>-figs/` once the figures are inlined: the SVG now lives in the
-HTML. The checker covers the routing comment, figures (SVG `<title>`, caption numbering, markers left), table row
+`<skill>` is this skill's folder. Delete `<slug>-figs/` once the figures are inlined (the `Dxx.html` sources go with
+it): the SVG now lives in the HTML. To change a figure later, edit the SVG in the HTML, or redraw from a copy of the template. The checker covers the routing comment, figures (SVG `<title>`, caption numbering, markers left), table row
 widths, empty sections, duplicate ids, broken `#` links, code languages, template placeholders, the repo
 vocabulary and a stale twin. Fix and re-run until it prints OK.
 
@@ -152,6 +182,7 @@ and claims not verified in code.
 - Editing the `.llm.md` by hand, or committing the HTML without regenerating it.
 - Saying "the doc is done" when only a local draft exists, or before `check-doc` prints OK.
 - A diagram whose labels are paths or images: the twin gets nothing from it.
+- Hand-placing coordinates for a figure a template covers, or a literal colour or font in a figure.
 - Re-typing SVGs into the HTML instead of `inline-figures.mjs`.
 - Repeating a number from a canvas or paper without saying which design and date it measured.
 - Putting the HTML in `.cursorignore` or a `Read` deny rule.

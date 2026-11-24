@@ -91,16 +91,20 @@ ${svgSize ? `body>svg{display:block;width:${svgSize.width}px;height:${svgSize.he
 </style></head><body>${body}</body></html>`;
 
 /**
- * A page that renders untrusted markup: JavaScript off, and only inline data, fonts and https stylesheets (a theme's
- * @import of a font css) may load. Images, scripts, frames and everything else on the network are refused.
+ * A page that renders untrusted markup: JavaScript off (draw.mjs turns it on for a diagram's own inline script),
+ * and only inline data, fonts and https stylesheets (a theme's @import of a font css) may load. Images, external
+ * scripts, frames and everything else on the network are refused.
  */
-export async function sandboxedPage(browser, options = {}) {
-  const context = await browser.newContext({ ...options, javaScriptEnabled: false });
+export async function sandboxedPage(browser, options = {}, { scripts = false, init = null, stylesheetHosts = null } = {}) {
+  const context = await browser.newContext({ ...options, javaScriptEnabled: scripts });
+  if (init) await context.addInitScript({ content: init });
   await context.route('**/*', (route) => {
     const request = route.request();
     const url = request.url();
     const type = request.resourceType();
-    const ok = /^(data|about|blob):/i.test(url) || type === 'font' || (type === 'stylesheet' && /^https:/i.test(url));
+    // stylesheetHosts (an array) narrows https stylesheets to the hosts the theme imports; null allows any https stylesheet.
+    const sheetOk = /^https:/i.test(url) && (!stylesheetHosts || stylesheetHosts.includes(new URL(url).hostname));
+    const ok = /^(data|about|blob):/i.test(url) || type === 'font' || (type === 'stylesheet' && sheetOk);
     return ok ? route.continue() : route.abort();
   });
   return context.newPage();

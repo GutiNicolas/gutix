@@ -1,0 +1,41 @@
+<!--
+  Flow: one main column, decisions as diamonds, error branches to the side.
+  Use when: the doc describes a process or algorithm with a decision or two and a failure path.
+  How: copy this file to <slug>-figs/Dxx.html (Dxx = the figure's id), replace the example content, then run
+  node <skill>/scripts/draw.mjs <slug>-figs/   to write Dxx.svg next to it. The drawing script runs in Chrome with
+  svg-kit.js and the doc's theme already loaded: use K.* (see the header of scripts/svg-kit.js), never colours or fonts.
+  The <title> below becomes the SVG <title>: one sentence that says what the diagram shows.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>A request is validated, processed or rejected with an error that is stored, and the stored error is retried later</title>
+</head>
+<body>
+<div id="canvas"></div>
+<script>
+K.draw(() => {
+	const { svg, box, diamond, cyl, link, legend } = K;
+	svg(820, 520);
+
+	// Main column on the left, error branches on the right. A diamond with 'auto' sizes itself to its text.
+	const begin = box(70, 0, 200, 40, { rx: 20, title: 'Request received', titleSize: 14.5 });
+	const check = diamond(170, 150, 'auto', 'auto', { lines: ['Is the payload', 'valid?'], size: 14 });
+	const step = box(70, 270, 200, 46, { title: 'Process the request', titleSize: 14.5 });
+	const done = box(70, 400, 200, 44, { rx: 22, kind: 'dark', title: 'Response sent', titleSize: 14.5 });
+	const fail = box(420, check.cy - 33, 200, 66, { kind: 'error', title: 'Reject', lines: ['400 with the reason'] });
+	const store = cyl(420, 360, 200, 'auto', { title: '`rejected_requests`', lines: ['what is kept for a retry'] });
+
+	link(begin, check);
+	link(check, step, { label: 'yes', labelSide: 'right' });
+	link(step, done);
+	link(check, fail, { label: 'no' });
+	link(fail, store);
+	link(store, done, { dashed: true, label: 'retried later' });
+
+	legend([['new', 'Step'], 'decision', ['errorBox', 'Error'], ['dark', 'End'], 'store', 'async']);
+});
+</script>
+</body>
+</html>

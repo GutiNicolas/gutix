@@ -1,0 +1,72 @@
+<!--
+  Rollout: phases on a day-by-day timeline, with milestones and who answers.
+  Use when: the doc plans a migration or release over days: what happens when, the key moments, and who is on point.
+  How: copy this file to <slug>-figs/Dxx.html (Dxx = the figure's id), replace the example content, then run
+  node <skill>/scripts/draw.mjs <slug>-figs/   to write Dxx.svg next to it. The drawing script runs in Chrome with
+  svg-kit.js and the doc's theme already loaded: use K.* (see the header of scripts/svg-kit.js), never colours or fonts.
+  The <title> below becomes the SVG <title>: one sentence that says what the diagram shows.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dual write starts on day 0, reads move on day 3, and the old path is removed after day 5</title>
+</head>
+<body>
+<div id="canvas"></div>
+<script>
+K.draw(() => {
+	const { svg, el, text, lines, legend, ICONS, C } = K;
+	const D0 = 300; // x of day 0
+	const DAY = 70; // px per day
+	const DAYS = 5;
+	const END = D0 + DAYS * DAY + 180;
+	// bar: [x1, x2] in px (use D0 + day * DAY); milestone: x; strong: darker bar; dashed: work after the rollout.
+	const ROWS = [
+		{ title: 'Dual write', detail: ['writes go to the old and the new store'], bar: [D0, D0 + 2 * DAY], strong: true },
+		{ title: 'Backfill', detail: ['copy history', 'in batches of 1,000'], bar: [D0 + DAY, D0 + 3 * DAY] },
+		{ title: 'Read cutover', detail: ['reads move to the new store'], milestone: D0 + 3 * DAY },
+		{ title: 'Remove the old path', detail: ['tracked in a later ticket'], bar: [D0 + 5 * DAY, D0 + 5 * DAY + 120], dashed: true }
+	];
+	// [x1, x2, label, kind]: who answers during each stretch.
+	const OWNERS = [[D0, D0 + 3 * DAY, 'Platform team', 'new'], [D0 + 3 * DAY, END - 20, 'Product team', 'existing']];
+
+	const top = 64;
+	const rowH = (r) => Math.max(56, 22 + (r.detail.length + 1) * 18);
+	const height = top + ROWS.reduce((h, r) => h + rowH(r), 0);
+	svg(END, height + 90);
+
+	for (const [x1, x2, label] of [[D0 - 110, D0 - 12, 'before day 0'], [D0, D0 + DAYS * DAY, `Day 0 to day ${DAYS}`], [D0 + DAYS * DAY + 12, END, 'after']]) {
+		el('rect', { x: x1, y: 0, width: x2 - x1, height: 30, rx: 6, fill: C.existingFill });
+		text((x1 + x2) / 2, 20, label, { size: 13, weight: 600, anchor: 'middle' });
+	}
+	for (let d = 0; d <= DAYS; d++) {
+		const x = D0 + d * DAY;
+		const edge = d === 0 || d === DAYS;
+		el('line', { x1: x, y1: 62, x2: x, y2: height, stroke: edge ? C.lineStrong : C.line, 'stroke-dasharray': edge ? undefined : '2 3' });
+		text(x, 54, d ? `D+${d}` : 'D0', { size: 13, mono: true, anchor: 'middle', color: edge ? C.text : C.muted, weight: edge ? 600 : 400 });
+	}
+
+	let y = top;
+	ROWS.forEach((row, i) => {
+		const h = rowH(row);
+		if (i) el('line', { x1: 0, y1: y, x2: END, y2: y, stroke: C.line });
+		lines(0, y + 8, [{ t: row.title, size: 14, weight: 600 }, ...row.detail.map((t) => ({ t, size: 13 }))], { anchor: 'start' });
+		const cy = y + h / 2;
+		if (row.bar) el('rect', { x: row.bar[0], y: cy - 13, width: row.bar[1] - row.bar[0], height: 26, rx: 6, fill: row.strong ? K.T.accentSoft : K.KIND.new.fill, stroke: C.accent, 'stroke-width': 1.5, 'stroke-dasharray': row.dashed ? '5 4' : undefined });
+		if (row.milestone) el('path', { d: `M${row.milestone},${cy - 11} l11,11 l-11,11 l-11,-11 z`, fill: C.dark });
+		y += h;
+	});
+
+	el('line', { x1: 0, y1: height + 14, x2: END, y2: height + 14, stroke: C.lineStrong });
+	lines(0, height + 22, [{ t: 'Who answers', size: 14, weight: 600 }], { anchor: 'start' });
+	for (const [x1, x2, label, kind] of OWNERS) {
+		el('rect', { x: x1, y: height + 28, width: x2 - x1, height: 34, rx: 6, fill: K.KIND[kind].fill, stroke: K.KIND[kind].stroke, 'stroke-width': 1.5 });
+		text((x1 + x2) / 2, height + 50, label, { size: 13, weight: 600, anchor: 'middle' });
+	}
+
+	legend([['new', 'Phase'], 'milestone', ['tombstone', 'Later ticket']]);
+});
+</script>
+</body>
+</html>

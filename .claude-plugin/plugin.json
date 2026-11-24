@@ -1,7 +1,7 @@
 {
   "name": "gutix",
   "description": "Nicolas' engineering workflows: triage, feature intake, ship (dispatch, integrate, release, handoff), bug fix (test first), PR review, peer review of teammates' PRs, sign-off, verify, learn, design docs, slide decks and UI evidence.",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "author": {
     "name": "Nicolas Gutierrez"
   },

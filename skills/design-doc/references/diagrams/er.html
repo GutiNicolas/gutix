@@ -1,0 +1,48 @@
+<!--
+  ER: tables with keys and a logical relation between them.
+  Use when: the doc shows how data is stored: tables, their columns, and which table points at which.
+  How: copy this file to <slug>-figs/Dxx.html (Dxx = the figure's id), replace the example content, then run
+  node <skill>/scripts/draw.mjs <slug>-figs/   to write Dxx.svg next to it. The drawing script runs in Chrome with
+  svg-kit.js and the doc's theme already loaded: use K.* (see the header of scripts/svg-kit.js), never colours or fonts.
+  The <title> below becomes the SVG <title>: one sentence that says what the diagram shows.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Order lines belong to a merchant total through a logical many-to-one relation on merchant_id</title>
+</head>
+<body>
+<div id="canvas"></div>
+<script>
+K.draw(() => {
+	const { svg, zone, table, relation, legend, footer } = K;
+	svg(800, 300);
+
+	// Tables 310 px wide: the detail table on the left, the aggregate on the right, a 150 px corridor between them.
+	zone(0, 0, 800, 240, 'Orders schema');
+	const detail = table(16, 40, 310, 'order_lines', [
+		{ note: 'partitioned by month on `occurred_at`' },
+		['id', 'uuid', 'PK'],
+		['merchant_id', 'text'],
+		['amount', 'numeric'],
+		['created_at', 'timestamptz']
+	]);
+	const totals = table(474, 40, 310, 'merchant_totals', [
+		['merchant_id', 'text', 'PK'],
+		{ group: '`base_*` and `live_*` counters' },
+		['purchases', 'bigint', null, true],
+		['updated_at', 'timestamptz']
+	]);
+
+	// table() returns centers[column]: the y of each row, to attach a relation to a column.
+	const from = detail.centers['merchant_id'];
+	const to = totals.centers['merchant_id'];
+	relation([[detail.r, from], [400, from], [400, to], [totals.x, to]], { label: ['by', '`merchant_id`'], labelAt: [400, to - 46] });
+
+	legend(['relation', 'pk']);
+	footer(['Which assumption or type still has to be confirmed, if any.']);
+});
+</script>
+</body>
+</html>

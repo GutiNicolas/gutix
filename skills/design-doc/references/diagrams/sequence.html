@@ -1,0 +1,48 @@
+<!--
+  Sequence: who calls whom, in order, with notes and alternatives.
+  Use when: the doc walks through one scenario across components over time (a request, a message, a failure path).
+  How: copy this file to <slug>-figs/Dxx.html (Dxx = the figure's id), replace the example content, then run
+  node <skill>/scripts/draw.mjs <slug>-figs/   to write Dxx.svg next to it. The drawing script runs in Chrome with
+  svg-kit.js and the doc's theme already loaded: use K.* (see the header of scripts/svg-kit.js), never colours or fonts.
+  The <title> below becomes the SVG <title>: one sentence that says what the diagram shows.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>A consumer reads a batch from the queue, writes it in one transaction and acknowledges it, or rolls back on failure</title>
+</head>
+<body>
+<div id="canvas"></div>
+<script>
+K.draw(() => {
+	const { svg, sequence, legend } = K;
+	svg(900, 700);
+
+	// participants in column order; steps in time order. type: 'call' (default), 'return' (dashed), 'async' (dashed),
+	// 'lost' (ends in a cross). A step with from === to is a message to itself. { note, over } and { group } nest.
+	sequence([
+		{ id: 'prod', title: 'Producer', kind: 'existing' },
+		{ id: 'q', title: 'orders queue', shape: 'queue' },
+		{ id: 'c', title: 'Consumer', lines: ['new service'] },
+		{ id: 'db', title: 'Database', lines: ['writer'], shape: 'store' }
+	], [
+		{ from: 'prod', to: 'q', label: 'publish the order event', type: 'async' },
+		{ from: 'c', to: 'q', label: 'ReceiveMessage' },
+		{ from: 'q', to: 'c', label: 'batch of up to 10', type: 'return' },
+		{ note: ['Decides which events', 'are new and which are repeats'], over: 'c' },
+		{ from: 'c', to: 'db', label: ['BEGIN, INSERT …', 'ON CONFLICT DO NOTHING'] },
+		{ group: 'alt', title: 'happy path', steps: [
+			{ from: 'c', to: 'db', label: 'COMMIT' }
+		], else: { title: 'write fails', steps: [
+			{ from: 'c', to: 'db', label: 'ROLLBACK' },
+			{ note: 'The batch stays in the queue and is retried', over: ['c', 'db'] }
+		] } },
+		{ from: 'c', to: 'q', label: 'DeleteMessageBatch' }
+	], { number: true });
+
+	legend(['existing', 'new', 'async']);
+});
+</script>
+</body>
+</html>

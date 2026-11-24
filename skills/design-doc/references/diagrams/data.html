@@ -1,0 +1,52 @@
+<!--
+  Data: a bar chart against reference lines, for sizes and estimates.
+  Use when: the doc argues from an estimate (storage, throughput, cost) and the reader should see the values against a limit.
+  How: copy this file to <slug>-figs/Dxx.html (Dxx = the figure's id), replace the example content, then run
+  node <skill>/scripts/draw.mjs <slug>-figs/   to write Dxx.svg next to it. The drawing script runs in Chrome with
+  svg-kit.js and the doc's theme already loaded: use K.* (see the header of scripts/svg-kit.js), never colours or fonts.
+  The <title> below becomes the SVG <title>: one sentence that says what the diagram shows.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Projected storage per option against the 8 GB budget and the 10 GB hard limit</title>
+</head>
+<body>
+<div id="canvas"></div>
+<script>
+K.draw(() => {
+	const { svg, el, text, lines, scale, footer, C } = K;
+	// [label, value, label shown above the bar]; REFS: [value, colour role (accent | warning | error), label].
+	const BARS = [['Option A', 4.2, '4.2'], ['Option B', 7.6, '7.6'], ['Option C', 10.9, '10.9*']];
+	const REFS = [[8, 'accent', 'Budget 8 GB'], [10, 'warning', 'Hard limit 10 GB']];
+	const MAX = 12;
+
+	svg(760, 460);
+	const LEFT = 50;
+	const RIGHT = 470;
+	const y = scale([0, MAX], [400, 40]);
+
+	text(LEFT - 12, 26, 'GB', { size: 13, weight: 600, color: C.muted, anchor: 'end' });
+	for (let v = 0; v <= MAX; v += 2) {
+		el('line', { x1: LEFT, y1: y(v), x2: RIGHT, y2: y(v), stroke: v ? C.line : C.lineStrong, 'stroke-width': 1 });
+		text(LEFT - 12, y(v) + 4, String(v), { size: 13, mono: true, color: C.muted, anchor: 'end' });
+	}
+	const slot = (RIGHT - LEFT) / BARS.length;
+	BARS.forEach(([label, value, shown], i) => {
+		const cx = LEFT + slot * (i + 0.5);
+		const over = value > REFS[0][0];
+		el('rect', { x: cx - 34, y: y(value), width: 68, height: y(0) - y(value), rx: 3, fill: over ? C.warning : C.accent });
+		text(cx, y(value) - 10, shown, { size: 14, weight: 600, anchor: 'middle', color: over ? C.warning : C.text });
+		text(cx, y(0) + 24, label, { size: 14, weight: 600, anchor: 'middle' });
+	});
+	for (const [value, role, label] of REFS) {
+		el('line', { x1: LEFT, y1: y(value), x2: RIGHT + 8, y2: y(value), stroke: C[role], 'stroke-width': 1.4, 'stroke-dasharray': role === 'accent' ? undefined : '6 4' });
+		lines(RIGHT + 16, y(value) - 9, [{ t: label, color: role === 'accent' ? C.text : C[role] }], { anchor: 'start', size: 13, lh: 15 });
+	}
+
+	footer(['Source and method of the estimate.', '* Which value the source does not give, and why it is marked.']);
+});
+</script>
+</body>
+</html>

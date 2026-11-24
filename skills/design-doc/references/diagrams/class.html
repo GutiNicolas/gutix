@@ -1,0 +1,52 @@
+<!--
+  Class diagram: packages as lanes, classes as cards, dependencies and implementations as links.
+  Use when: the doc explains how a design is split into classes or modules and who depends on whom.
+  How: copy this file to <slug>-figs/Dxx.html (Dxx = the figure's id), replace the example content, then run
+  node <skill>/scripts/draw.mjs <slug>-figs/   to write Dxx.svg next to it. The drawing script runs in Chrome with
+  svg-kit.js and the doc's theme already loaded: use K.* (see the header of scripts/svg-kit.js), never colours or fonts.
+  The <title> below becomes the SVG <title>: one sentence that says what the diagram shows.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The consumer package depends on the data package through a store interface, and the API package reads through the same interface</title>
+</head>
+<body>
+<div id="canvas"></div>
+<script>
+K.draw(() => {
+	const { svg, zone, card, link, arrow, cols, below, legend } = K;
+	svg(1000, 600);
+
+	// Three lanes: input on the left, data in the middle, reads on the right, so dependencies do not cross.
+	const [xL, xM, xR] = cols(0, [300, 300, 300], 50);
+	zone(xL, 0, 300, 600, '`orders.input`');
+	zone(xM, 0, 300, 600, '`orders.data`');
+	zone(xR, 0, 300, 600, '`orders.api`');
+
+	const listener = card(xL + 20, 40, 260, { name: 'Listener', members: ['poll()', 'shutdown()'] });
+	const processor = card(xL + 20, below(listener), 260, { name: 'Processor', members: ['process(batch)', 'retry(message)'] });
+	const message = card(xL + 20, below(processor), 260, { name: 'Message', stereo: '«record»', notes: ['tolerant reader'] });
+	const repo = card(xM + 20, 40, 260, { name: 'Repository', members: ['upsert(rows)', 'find(id)'] });
+	const iface = card(xM + 20, below(repo), 260, { name: 'Store', stereo: '«interface»', members: ['write(key, value)', 'read(key)'] });
+	const impl = card(xM + 20, below(iface, 40), 260, { name: 'CacheStore', members: ['write → one atomic script'] });
+	const controller = card(xR + 20, 40, 260, { name: 'Controller', members: ['get(id)'] });
+	const service = card(xR + 20, below(controller), 260, { name: 'Service', members: ['totals(id)'] });
+	const response = card(xR + 20, below(service), 260, { name: 'Response', stereo: '«record»', members: ['id, total, updatedAt'] });
+
+	// link() picks the sides and makes an elbow only when the cards do not overlap vertically.
+	link(listener, processor);
+	link(processor, repo);
+	link(processor, iface);
+	arrow([impl.top(), iface.bottom()], { dashed: true, marker: 'realize' });
+	link(controller, service);
+	link(service, response);
+	link(service, iface);
+	link(service, repo);
+
+	legend([['new', 'Class'], 'uses', 'realize']);
+});
+</script>
+</body>
+</html>

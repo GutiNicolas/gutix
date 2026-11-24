@@ -1,0 +1,54 @@
+<!--
+  Architecture: components in lanes, with stores and queues.
+  Use when: the doc shows what is new next to what already exists, and how data moves between them (components, queues, stores).
+  How: copy this file to <slug>-figs/Dxx.html (Dxx = the figure's id), replace the example content, then run
+  node <skill>/scripts/draw.mjs <slug>-figs/   to write Dxx.svg next to it. The drawing script runs in Chrome with
+  svg-kit.js and the doc's theme already loaded: use K.* (see the header of scripts/svg-kit.js), never colours or fonts.
+  The <title> below becomes the SVG <title>: one sentence that says what the diagram shows.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Orders flow from an existing producer through a queue to a new consumer that writes one store and serves reads from its replica</title>
+</head>
+<body>
+<div id="canvas"></div>
+<script>
+K.draw(() => {
+	const { svg, zone, box, cyl, queue, link, cols, below, legend } = K;
+	svg(1000, 600);
+
+	// Four lanes left to right, three rows (write path, read path, support). Leave room between lanes for the
+	// arrow labels; with four lanes, three rows keep the drawing from getting taller than it is wide.
+	const W = [180, 170, 210, 190];
+	const [xE, xQ, xA, xS] = cols(0, W, 100);
+	const ROW = [50, 250, 450];
+	for (const [x, w, label] of [[xE, W[0], 'Existing system'], [xQ, W[1], 'Queues'], [xA, W[2], 'New service'], [xS, W[3], 'Stores']]) zone(x, 0, w, 560, label);
+
+	const producer = box(xE + 16, ROW[0], W[0] - 32, 'auto', { kind: 'existing', title: 'Order producer', lines: ['publishes order events'] });
+	const reader = box(xE + 16, ROW[1], W[0] - 32, 'auto', { kind: 'existing', title: 'Reporting job', lines: ['reads order totals'] });
+	const downstream = box(xE + 16, ROW[2], W[0] - 32, 'auto', { kind: 'existing', title: 'Billing', lines: ['current contract'] });
+	const q = queue(xQ + 16, ROW[0] + 6, W[1] - 32, 'auto', { title: 'orders queue' });
+	const dlq = queue(xQ + 16, below(q, 50), W[1] - 32, 'auto', { title: 'Dead letters', lines: ['safety net'] });
+	const worker = box(xA + 16, ROW[0], W[2] - 32, 'auto', { title: 'Order consumer', lines: ['3 replicas'] });
+	const api = box(xA + 16, ROW[1], W[2] - 32, 'auto', { title: 'Totals API', lines: [{ t: 'GET /v1/totals/{id}', mono: true, size: 13 }] });
+	const metrics = box(xA + 16, ROW[2], W[2] - 32, 'auto', { title: 'Metrics', lines: ['agent'] });
+	const writer = cyl(xS + 16, ROW[0] - 10, W[3] - 32, 'auto', { title: 'Writer database', lines: [{ t: 'order_totals', mono: true, size: 13 }] });
+	const replica = cyl(xS + 16, ROW[1], W[3] - 32, 'auto', { title: 'Read replica' });
+
+	link(producer, q, { label: 'order event' });
+	link(q, worker);
+	link(q, dlq, { dashed: true });
+	link(worker, writer, { label: 'upsert' });
+	link(writer, replica, { dashed: true, label: ['replication', 'async'] });
+	link(reader, api, { label: 'GET' });
+	link(api, replica, { label: 'reads' });
+	link(reader, downstream, { label: ['adapter'], labelSide: 'right' });
+	link(api, metrics);
+
+	legend(['existing', 'new', 'store', 'queue', 'async']);
+});
+</script>
+</body>
+</html>

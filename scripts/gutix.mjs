@@ -467,6 +467,7 @@ function removeFromRepo(state, prefix) {
   if (state.cursorCreated) rmdirIfEmpty(path.join(state.path, '.cursor'));
 }
 
+let partialFailure = false; // a repo could not be updated: the command exits 1, except the daily hook (quiet), which must never fail a session
 const isScoped = (folder, profile) => exists(path.join(folder, '.claude-plugin/plugin.json')) && Array.isArray(profile.match) && profile.match.length > 0;
 
 // The global copy an earlier link-org left (recognised by our manifest): backed up, then removed.
@@ -499,7 +500,7 @@ function sweepOrg(entry, { roots, quiet = false, replacePort = false } = {}) {
       try {
         repos.push(installIntoRepo({ repo, staged, skills: skills.map((x) => `${prefix}${x}`), prefix, prev: prevByPath.get(repo) }));
         say(`${entry.name}: ${skills.length} skills in ${repo}/.cursor/skills`);
-      } catch (e) { warn(`${entry.name}: ${repo}: ${e.message}`); if (prevByPath.has(repo)) repos.push(prevByPath.get(repo)); }
+      } catch (e) { warn(`${entry.name}: ${repo}: ${e.message}`); if (!quiet) partialFailure = true; if (prevByPath.has(repo)) repos.push(prevByPath.get(repo)); }
     }
   } finally {
     fs.rmSync(staged, { recursive: true, force: true });
@@ -699,7 +700,7 @@ async function main(argv) {
   }
   try {
     await entry.run(rest);
-    return 0;
+    return partialFailure ? 1 : 0;
   } catch (e) {
     process.stderr.write(`error: ${e.message}\n`);
     if (e instanceof UsageError) process.stderr.write(`usage: gutix.mjs ${entry.usage}\n`);

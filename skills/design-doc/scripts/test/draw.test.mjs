@@ -9,7 +9,7 @@ import path from 'node:path';
 import http from 'node:http';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { findChrome } from '../render.mjs';
+import { findChrome, loadPlaywright, sandboxedPage } from '../render.mjs';
 import { checkSvg, pageOf } from '../draw.mjs';
 import { checkDoc } from '../check-doc.mjs';
 
@@ -86,13 +86,52 @@ test('text below 13 px is refused, and the error names the label', { skip }, () 
   assert.equal(fs.existsSync(path.join(dir, 'D01.svg')), false);
 });
 
-test('a source that reads the network or the disk gets nothing, and a script error fails the figure', { skip }, () => {
-  const src = '<title>Net</title><div id="canvas"></div><script>K.draw(async () => { const r = await fetch("https://example.com/").then(() => "reached", () => "blocked"); K.svg(300, 100); K.text(10, 40, r, { size: 14 }); });</script>';
-  const dir = figsDir([src, '<title>Boom</title><script>throw new Error("kaput")</script>']);
+test('a script error in the source fails that figure and only that figure', { skip }, () => {
+  const ok = '<title>Ok</title><div id="canvas"></div><script>K.draw(() => { K.svg(300, 100); K.text(10, 40, "fine", { size: 14 }); });</script>';
+  const dir = figsDir([ok, '<title>Boom</title><script>throw new Error("kaput")</script>']);
   const r = run('draw.mjs', [dir]);
   assert.equal(r.status, 1);
   assert.match(r.stderr, /D02\.html: .*kaput/);
-  assert.match(fs.readFileSync(path.join(dir, 'D01.svg'), 'utf8'), /blocked/);
+  assert.ok(fs.existsSync(path.join(dir, 'D01.svg')));
+  assert.equal(fs.existsSync(path.join(dir, 'D02.svg')), false);
+});
+
+// The sandbox is the one draw.mjs uses. "Refused" is told from "offline" by the error Chrome reports: a request our
+// route handler aborts fails with ERR_FAILED, an unreachable host with ERR_NAME_NOT_RESOLVED or ERR_CONNECTION_REFUSED.
+async function probeSandbox(html, urls) {
+  const hits = [];
+  const server = http.createServer((req, res) => { hits.push(req.url); res.end('reached'); });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { chromium } = loadPlaywright();
+  const browser = await chromium.launch({ executablePath: findChrome() });
+  try {
+    const page = await sandboxedPage(browser, {}, { scripts: true });
+    const failures = new Map();
+    page.on('requestfailed', (r) => failures.set(r.url(), r.failure().errorText));
+    const local = `http://127.0.0.1:${server.address().port}/probe`;
+    await page.setContent(html(local), { waitUntil: 'load' });
+    const results = await page.evaluate((list) => Promise.all(list.map((u) => fetch(u).then((r) => r.text(), (e) => `error: ${e.message}`))), urls(local));
+    const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    return { hits, failures, results, local, background };
+  } finally { await browser.close(); server.close(); server.closeAllConnections(); }
+}
+
+test('the draw sandbox refuses http and https fetches (aborted by the route, not just offline) and never reaches a local server', { skip }, async () => {
+  const { hits, failures, results, local } = await probeSandbox(() => '<html><body></body></html>', (l) => [l, 'https://sandbox-probe.invalid/x']);
+  assert.deepEqual(hits, [], 'the local server saw no request');
+  assert.ok(results.every((r) => r.startsWith('error:')), results.join(' | '));
+  assert.equal(failures.get(local), 'net::ERR_FAILED');
+  assert.equal(failures.get('https://sandbox-probe.invalid/x'), 'net::ERR_FAILED', 'an offline host would say ERR_NAME_NOT_RESOLVED');
+});
+
+test('the draw sandbox cannot read a file outside the figs folder, by fetch or by stylesheet', { skip }, async () => {
+  const secret = path.join(tmp(), 'secret.txt');
+  fs.writeFileSync(secret, 'TOPSECRET');
+  const css = path.join(tmp(), 'leak.css');
+  fs.writeFileSync(css, 'body{background:rgb(1,2,3)}');
+  const { results, background } = await probeSandbox(() => `<html><head><link rel="stylesheet" href="file://${css}"></head><body></body></html>`, () => [`file://${secret}`]);
+  assert.ok(results.every((r) => r.startsWith('error:') && !r.includes('TOPSECRET')), results.join(' | '));
+  assert.notEqual(background, 'rgb(1, 2, 3)', 'the file stylesheet was applied');
 });
 
 test('a drawing with active or external content is refused and nothing is written for it', { skip }, () => {

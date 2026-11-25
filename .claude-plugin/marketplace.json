@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Local marketplace for the gutix plugin",
-    "version": "0.17.1"
+    "version": "0.17.2"
   },
   "plugins": [
     {
       "name": "gutix",
       "source": "./",
       "description": "Nicolas' engineering workflows: triage, feature intake, ship (dispatch, integrate, release, handoff), bug fix (test first), PR review, peer review of teammates' PRs, sign-off, verify, learn, design docs, slide decks and UI evidence.",
-      "version": "0.17.1"
+      "version": "0.17.2"
     }
   ]
 }

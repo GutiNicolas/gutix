@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.2
+
+- Cursor workers stop polling logs. A Cursor chat gets no completion notice for a background command and has no
+  Claude Code hooks, so workers started a check in the background and read its log with `tail` over and over.
+  `gutix-ship`'s dispatch now gives each worker prompt Cursor's own rule in place of the brief's background-command
+  line: run long checks in the foreground into a log file, read its end once, never poll or `tail -f`.
+
 ## 0.17.1
 
 - `ship` now has a Cursor copy (`gutix-ship`), so feature-intake no longer points Cursor users to a skill they don't

@@ -11,6 +11,12 @@ this instead:
   Then show the user one prompt per task, each in its own fenced block: the filled worker brief, starting with
   `Work only in <absolute worktree path>` and naming the model. The user pastes each into a new Agent chat. End
   there: don't run the workers in this chat, and don't wait for them.
+- **Worker prompts:** a Cursor chat gets no completion notice for a background command, and it loads neither the
+  user's global `CLAUDE.md` nor Claude Code's hooks. So in each prompt, replace the brief's background-command line
+  and its "Context budget" pointer with: "Run long checks (build, tests, the repo's e2e script) in the foreground with
+  their output to a file, then read the end once: `<cmd> > <log> 2>&1; echo exit=$? >> <log>; tail -n 40 <log>`, and
+  `grep` the log for more. Never start a check in the background and poll it (`tail`, `sleep`, reading the log again),
+  and never `tail -f`. Read files by line range, and run `git diff --stat` before a full diff."
 - **integrate, step 2:** a conflict beyond the shared ones becomes one more prompt for a new chat, as in dispatch.
 - **release, step 2:** run `gh pr checks <pr> --watch --fail-fast` as a background command and read its result once,
   after the review; don't poll it.

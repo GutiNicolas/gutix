@@ -44,7 +44,9 @@ claude plugin marketplace add <org>/<repo>#<branch>
 
 ### Cursor
 
-Cursor gets a generated copy of the skills (names prefixed `gutix-`), not a second port to maintain.
+Cursor gets a generated copy of the skills (names prefixed `gutix-`), not a second port to maintain. `gutix-ship`
+works there too: Cursor can't open chats for you, so `dispatch` creates each worker's worktree and hands you one
+prompt per task to paste into a new Agent chat.
 
 ```bash
 git clone https://github.com/GutiNicolas/gutix.git ~/projects/gutix

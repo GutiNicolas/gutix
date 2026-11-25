@@ -150,19 +150,21 @@ test('without --prefix, or for a folder that is not a plugin, it fails and write
   assert.ok(!exists(path.join(home, '.cursor')));
 });
 
-test('gutix itself: every skill but the Claude-only ones as gutix-<x>, same version, design-doc tests pass in the copy', () => {
+test('gutix itself: every skill as gutix-<x> (Claude-only ones through their override), same version, design-doc tests pass in the copy', () => {
   const home = tmp();
   const r = run(home, [root, '--prefix', 'gutix-']);
   assert.equal(r.status, 0, r.stderr);
   const t = targetOf(home, 'gutix');
-  const expected = fs.readdirSync(path.join(root, 'skills')).filter((s) => s !== 'ship').map((s) => `gutix-${s}`).sort();
+  const expected = fs.readdirSync(path.join(root, 'skills')).map((s) => `gutix-${s}`).sort();
   assert.deepEqual(fs.readdirSync(path.join(t, 'skills')).sort(), expected);
   for (const s of expected) assert.match(read(path.join(t, 'skills', s, 'SKILL.md')), new RegExp(`^---\\nname: ${s}\\n`));
   assert.equal(JSON.parse(read(path.join(t, '.cursor-plugin/plugin.json'))).version, JSON.parse(read(path.join(root, '.claude-plugin/plugin.json'))).version);
-  assert.match(read(path.join(t, 'skills/gutix-pr-review/SKILL.md')), /\n## In Cursor\n/);
+  for (const s of ['pr-review', 'ship']) assert.match(read(path.join(t, `skills/gutix-${s}/SKILL.md`)), /\n## In Cursor\n/);
   const all = walk(t).filter((p) => p.endsWith('.md')).map(read).join('\n');
   for (const s of expected) assert.ok(!all.includes(`gutix:${s.slice('gutix-'.length)}`), `a mention of ${s} was not rewritten`);
-  assert.ok(all.includes('gutix-sign-off') && all.includes('gutix:ship'), 'copied skills are renamed, the skipped ship keeps its name');
+  // A skill that points to another (feature-intake → ship) must point to one Cursor has.
+  const named = new Set([...all.matchAll(/\bgutix[:-]([a-z][a-z0-9-]*[a-z0-9])\b/g)].map((m) => m[1]).filter((n) => fs.existsSync(path.join(root, 'skills', n))));
+  for (const n of named) assert.ok(expected.includes(`gutix-${n}`), `gutix-${n} is named in the copy but not installed`);
 
   const tests = spawnSync('node', ['--test', path.join(t, 'skills/gutix-design-doc/scripts/test/design-doc.test.mjs')], { encoding: 'utf8', env: { ...process.env, HOME: home } });
   assert.equal(tests.status, 0, tests.stdout.slice(-1500));

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.1
+
+- `ship` now has a Cursor copy (`gutix-ship`), so feature-intake no longer points Cursor users to a skill they don't
+  have. Cursor can't open, rename or archive chats: `dispatch` creates each worker's worktree and gives one prompt per
+  task to paste into a new Agent chat, the release clean-up lists the chats to close and removes those worktrees, and
+  CI is read once instead of watched.
+
 ## 0.17.0
 
 - Feature plans are local by default: feature-intake writes the roadmap and task files git-excluded

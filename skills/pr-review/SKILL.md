@@ -135,7 +135,7 @@ in the code, e.g. infrastructure).
 - **Record the review** so no later run repeats it: `Reviewed: <head sha> (<date>, <n> findings)`. In the PR body
   only with the user's yes (`gh pr edit`: it publishes content); otherwise in the roadmap release line
   (`last reviewed: …`) for a release PR, or in the task file's Result for a task PR, committed alone
-  (`review: <sha>`). Neither exists: say in the report that the next run can't skip it.
+  (`review: <sha>`) when the plan is committed. Neither exists: say in the report that the next run can't skip it.
 - End with one question: which ones to fix. Fix nothing before the user answers.
 - A finding the user turns into a product rule ("this must never happen") goes through `gutix:triage` step 4, so it
   is recorded and enforced in future reviews.

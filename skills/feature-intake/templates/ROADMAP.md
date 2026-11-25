@@ -1,7 +1,11 @@
 # <Feature>: roadmap
 
+Plan: local · <absolute path of this folder>
 <!-- Lives at docs/features/<slug>/ROADMAP.md (or the repo's own plan folder). Single source of truth: any fresh
-     session resumes from this file alone. Keep it under ~150 lines; details go in the task files. -->
+     session resumes from this file alone. Keep it under ~150 lines; details go in the task files.
+     `local` (default): git-excluded in the main checkout, edited in place, deleted after the last phase ships, once
+     its lasting decisions are distilled into docs/decisions and .claude/review.md (gutix:ship release).
+     `committed`: in git, for plans people or sessions off this machine need; removed in the last release too. -->
 
 ## Goal
 <Who gets what, in one or two sentences.>

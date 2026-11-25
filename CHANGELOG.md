@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.17.0
+
+- Feature plans are local by default: feature-intake writes the roadmap and task files git-excluded
+  (`.git/info/exclude`) in the main checkout, with a `Plan: local · <path>` line, and no docs-only PR. `gutix:ship`
+  edits them in place without commits and hands workers the task file by absolute path. On the last phase, `release`
+  distills the lasting decisions into `docs/decisions/`, `.claude/review.md` invariants and the repo's API or design
+  docs (always-loaded files only for a convention every session needs), commits that with the release, and deletes the
+  plan after asking. `Plan: committed` keeps the old flow for plans needed off this machine; a roadmap with no `Plan:`
+  line is treated as committed.
+- The human-ownership plan is distilled and removed: its principles, with the rows 0.9.0 changed brought up to date
+  and the lasting rules for changing gutix (model by cost of being wrong, no private names, local plans), are now
+  `docs/PRINCIPLES.md`.
+- No question is lost to a question tool's four-per-call limit (Claude Code and Cursor): feature-intake (and its
+  refinement mode) and triage number every question and ask in rounds until each has an answer or a stated default;
+  sign-off asks its quiz as numbered plain text.
+
 ## 0.16.0
 
 - design-doc draws diagrams with a kit instead of hand-typed coordinates: `scripts/svg-kit.js` (shapes that return their

@@ -1,4 +1,7 @@
-Implement `docs/features/<slug>/tasks/T-<nn>.md` in <repo>, starting from <base branch>.
+Implement `<absolute path of the plan folder>/tasks/T-<nn>.md` in <repo>, starting from <base branch>.
+
+- A local plan is not in your worktree: read and fill the task file at that absolute path, commit no plan file, and
+  copy the whole Result into the PR body too (the plan folder is deleted when the feature ships; the PR stays).
 
 - Read that task file and the roadmap's Decisions and Contracts; they are the whole spec. Don't re-plan.
 - Run every acceptance criterion yourself and fill the task's "Result" section. Don't edit the roadmap: parallel task

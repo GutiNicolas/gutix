@@ -27,6 +27,10 @@ sessions writing the same files. Keep tool output small (CLAUDE.md "Context budg
   keeps the host's title from the command line. Sessions this mode starts get a title too: `T-<nn> <task title>`.
 - **Roadmap:** `docs/features/<slug>/ROADMAP.md` (or the repo's plan folder). Read Decisions, Contracts, the phase's
   release line and status table; open a task file only for a task this mode touches.
+- **Writing the plan** depends on the roadmap's `Plan:` line. `local` (what feature-intake writes by default): the
+  folder is git-excluded in the main checkout, so run this mode there, edit the files in place and commit nothing;
+  worktrees don't contain it, so give paths to it as absolute paths. `committed` (also a roadmap with no `Plan:`
+  line, the old behaviour): each write below is one plan-only commit, on the branch named there.
 - **Release branch:** each phase builds on `release/<slug>-p<n>`, cut from main by the phase's first dispatch. Task
   PRs target it, never main. One review per release, not per task.
 - **Rows:** `todo | in progress | integrated | changes asked | blocked | merged`. Only this skill edits them; workers
@@ -37,10 +41,10 @@ sessions writing the same files. Keep tool output small (CLAUDE.md "Context budg
 ## dispatch
 1. Ready = `todo` with every dependency `integrated` or `merged`. None: say what they wait on and end.
 2. Cut the release branch from main if it does not exist yet, and push it.
-3. Set the ready rows to `in progress` in **one commit on the release branch**, and push.
+3. Set the ready rows to `in progress` (committed plan: one commit on the release branch, pushed).
 4. Start one worker session per ready task: fresh context, **Sonnet, its own worktree**, from the release branch, with
-   [worker-brief.md](../feature-intake/templates/worker-brief.md) filled in. The brief points to the task file;
-   don't retype it. Tasks of the same wave that add a migration must have their `V<n>` in the task file: assign it
+   [worker-brief.md](../feature-intake/templates/worker-brief.md) filled in. The brief points to the task file (by
+   absolute path for a local plan); don't retype it. Tasks of the same wave that add a migration must have their `V<n>` in the task file: assign it
    first if missing.
 5. End. Don't wait for the workers.
 
@@ -52,22 +56,37 @@ sessions writing the same files. Keep tool output small (CLAUDE.md "Context budg
 3. Don't rerun the workers' checks; rerun only what you resolved yourself.
 4. Open or update the release PR to main: its CI is the one combined check (green task PRs don't cover what they
    break together). Read it, don't also run it locally. Put its link in the release line.
-5. Set the rows to `integrated` (`blocked` when the task's Result says so), one commit on the release branch. End.
+5. Set the rows to `integrated` (`blocked` when the task's Result says so); committed plan: one commit on the release
+   branch. End.
    Next: `dispatch` if more tasks became ready, else `release`.
 
 ## release
 A fresh session on the release PR to main; on the main model when the phase holds contracts, security or tricky
 state.
-1. Add the `e2e` label (`gh pr edit <pr> --add-label e2e`): the whole e2e runs in CI, in the background. One
+1. **Last phase only, first: distill.** The plan goes after this release; keep what a future change must know, where
+   it is read on demand, never in always-loaded files by default:
+   - a product decision or a choice between options → `docs/decisions/NNNN-<slug>.md` (gutix:triage step 4's place
+     and format);
+   - a rule the code must always follow → one `Invariants` line in `.claude/review.md`, linking that decision;
+   - a contract → the repo's API or design doc;
+   - `CLAUDE.md` / `AGENTS.md` / `.cursor/rules` → only a convention every session in that repo needs, one line.
+   Everything else (status, task details, handoff) is dropped: the PRs and commits keep it, the task Results included
+   (workers copy them into their PR body). Commit it on the release branch as `docs: decisions from <slug>` before
+   step 2, so CI, e2e and the review run once on it. A review fix that changes a decision updates its doc in the same
+   fix commit. Public repos: the org's public-surface rules apply to what is distilled.
+2. Add the `e2e` label (`gh pr edit <pr> --add-label e2e`): the whole e2e runs in CI, in the background. One
    `gh pr checks <pr> --watch --fail-fast` in the background; act on its completion notice.
-2. In parallel, `gutix:pr-review` on the release PR, walked task commit by task commit against each task file. It
+3. In parallel, `gutix:pr-review` on the release PR, walked task commit by task commit against each task file. It
    skips what its records say is already reviewed (task PRs reviewed by their workers included).
-3. Fixes the user approves land on the release branch (`fix(T-<nn>): …`), through pr-review's fix mode.
-4. Clean = no "fix before merge" finding open and CI, e2e included, green. Then merge to main with a **merge commit**
-   (keeps the per-task commits). `gutix:sign-off` (brief) is offered for the user to read, never required.
-5. Set the rows to `merged`, the release line and a Log line, in one roadmap-only commit on main (a roadmap-only PR
-   if main is protected).
-6. **Clean up**, in this same session:
+4. Fixes the user approves land on the release branch (`fix(T-<nn>): …`), through pr-review's fix mode.
+5. Clean = no "fix before merge" finding open and CI, e2e included, green. Then merge to main with a **merge commit**
+   (keeps the per-task commits). `gutix:sign-off` (brief) is offered for the user to read, never required; it reads
+   the plan, so it comes before the plan is removed.
+6. Set the rows to `merged`, the release line and a Log line. Committed plan: one roadmap-only commit on main (a
+   roadmap-only PR if main is protected); on the last phase that commit `git rm`s the plan folder instead. Local
+   plan, last phase: ask the user, then delete the folder and its `.git/info/exclude` line (it is not in git: this is
+   final).
+7. **Clean up**, in this same session:
    - Archive every session of the phase that is still open, one `archive_session` call each. If one fails, stop and
      list the rest for the user; don't retry.
    - Delete the merged branches, remote and local: the task branches and the release branch, each checked merged
@@ -80,12 +99,13 @@ Write (or replace) the roadmap's `## Handoff` section, dated:
 - **In flight:** open PRs, running sessions, blocked tasks and why.
 - **Next steps:** for each, the project (repo or folder) and the exact prompt to paste into a fresh session, in a
   fenced block, complete enough that nothing from this conversation is needed.
-Commit it alone, on the branch the roadmap lives on (the release branch while a phase is in flight, else main), and
-show the user the prompts. Also used when any session passes the context budget.
+Committed plan: commit it alone, on the branch the roadmap lives on (the release branch while a phase is in flight,
+else main). Show the user the prompts; for a local plan, each prompt names the checkout to run in. Also used when any
+session passes the context budget.
 
 ## status
 Read the status table and release lines, nothing else (no diffs). Per phase: merged, in flight, blocked and why, and
 the next mode to run. `gh pr checks` on the release PR only if the user asks about CI.
 
 ## Report
-What changed in the files (commit sha), sessions started or archived, branches deleted, and the next mode to run.
+What changed in the files (commit sha for a committed plan), sessions started or archived, branches deleted, and the next mode to run.

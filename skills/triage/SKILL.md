@@ -36,7 +36,8 @@ in the card.
 ## 3. Propose (only when there is a real choice)
 Skip this step when the user already decided ("this must never happen"): go to step 4 with their words.
 Two or three options, each with what it costs and what it risks, and one recommendation. Ask only questions whose answer
-changes what happens next. The user decides.
+changes what happens next. A question tool takes at most four per call: with more, number them all first and ask in
+rounds until each has an answer or a stated default. The user decides.
 
 ## 4. Record the decision (product decisions and choices between options)
 - One product: `docs/decisions/NNNN-<slug>.md` in the repo that enforces the rule (for several repos of one product, the
@@ -56,10 +57,10 @@ changes what happens next. The user decides.
   not this conversation**:
   - Fast path, or one small bug or feature: continue here.
   - Anything bigger (a feature that needs phases, several root causes, several repos): write the card into the repo
-    (the decision record, or `docs/features/<slug>/ROADMAP.md` from
+    (the decision record, or a local `docs/features/<slug>/ROADMAP.md` as in feature-intake step 3, from
     [its template](../feature-intake/templates/ROADMAP.md) with Goal, Decisions and the open questions filled) and
-    hand each piece to a **fresh session** with a short brief that points to that file: one `gutix:feature-intake`
-    session for the feature, one `gutix:bug-fix` session (Sonnet, own worktree) per independent root cause. Then end
+    hand each piece to a **fresh session** with a short brief that points to that file (by absolute path when the
+    plan is local): one `gutix:feature-intake` session for the feature, one `gutix:bug-fix` session (Sonnet, own worktree) per independent root cause. Then end
     this session; don't follow the work from here.
 
 ## Output

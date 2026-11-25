@@ -23,8 +23,9 @@ report.
 Write the page, the quiz and the grading in the user's language, the one they write in; code and `file:line` stay as is.
 
 ## 0. Inputs, cheapest first
-- **Roadmap:** the `docs/features/*/ROADMAP.md` (or the repo's plan folder) whose phase line or release line names the
-  target's head branch or PR. The default branch itself has no roadmap. Read its Hypothesis, Definition of done and
+- **Roadmap:** the `docs/features/*/ROADMAP.md` (or the repo's plan folder; a local plan is git-excluded, so look in
+  the main checkout, not the branch) whose phase line or release line names the target's head branch or PR. The
+  default branch itself has no roadmap. Read its Hypothesis, Definition of done and
   release line (`last reviewed`, `last signed off`, `open`).
 - **Human-read paths:** `## Human-read paths` in `.claude/review.md`; when missing, the default: auth/sessions/
   permissions, tenant scoping, crypto/keys/erasure, migrations and data scripts, transaction boundaries and locking,
@@ -55,8 +56,10 @@ tests pass" proves the mapping, not the query against a real schema). Then what 
 - First the **open areas** carried over from the release line: one new question on each.
 - Then 3-5 questions (3 when every task is `evidence` tier): at least one per attention-map area and one "what happens
   when X fails". Each tied to a `file:line`, answerable from the hunk, not from the summary. No yes/no questions.
-- Ask them all, then wait. The agent **never answers its own quiz** and shows no answer or hint
-  before the user has answered: expected answers stay out of every message and file until then.
+- Ask them all, numbered, as plain text in one message (a question tool takes at most four and offers options, which
+  would hint the answer), then wait; grade only once every number has an answer. The agent **never answers its own
+  quiz** and shows no answer or hint before the user has answered: expected answers stay out of every message and
+  file until then.
 - Grade each answer against the code: right, partly, or wrong, with the `file:line` that settles it. A partly or
   wrong answer gets the explanation, a deeper one if the user asks, and its area becomes (or stays) an **open area**.
 - Pass = every question of this round right. An open area closes only when a later question on it is answered right.

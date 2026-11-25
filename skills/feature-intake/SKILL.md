@@ -28,6 +28,9 @@ another repo, a "while you're here") goes to a new session, never into this one:
 - Challenge: what is unclear, contradictory, risky or more expensive than it looks; a simpler way to the same goal.
   For each point, give your recommendation. Ask only questions whose answer changes the plan; take conventional
   defaults for the rest and say so.
+- **No question lost.** A question tool takes at most four questions per call (Claude Code and Cursor). With more,
+  number them all in the message first, then ask in rounds (or let the user answer the numbered list in text). Before
+  drafting, check each number has an answer or a default you stated; never drop one that didn't fit.
 - A decision with real trade-offs or in a human-read area (here or in step 3): the problem and the options first, ask
   their take, then recommend. Offer to go deeper until they can argue it unaided.
 
@@ -50,9 +53,16 @@ Then decide the rest:
 Product decisions taken here are recorded as in gutix:triage step 4.
 
 ## 3. Shape the work into files
-The plan lives in the repo, not in this conversation: this session plans and ends, and every later step runs in a
+The plan lives in files, not in this conversation: this session plans and ends, and every later step runs in a
 fresh session that starts from the files alone. Use the [templates](templates/) (ROADMAP, task, worker-brief), under
-`docs/features/<slug>/` (or the repo's own plan folder; for several repos, the repo that owns the main contract).
+`docs/features/<slug>/` (or the repo's own plan folder; for several repos, the repo that owns the main contract) in
+that repo's main checkout.
+- **The plan is a working file, not history.** By default it stays **local**: add the folder to `.git/info/exclude`
+  (never to `.gitignore`, which is a team file) and write `Plan: local · <absolute path of the folder>` at the top of
+  the roadmap. What must outlive it is distilled into the repo's docs when the last phase ships (`gutix:ship
+  release`), then the folder is deleted. Choose `Plan: committed` only when someone outside this machine needs it
+  (teammates, cloud sessions, another computer); ask when unsure. A public repo is always `local`: plans name
+  internals.
 - One phase if it fits in one reviewable change per repo. Otherwise phases, each one shippable on its own, ordered
   so nothing deployed depends on a later phase.
 - `ROADMAP.md`: goal, hypothesis and definition of done (the user's words), decisions (with the reason), contracts
@@ -65,9 +75,10 @@ fresh session that starts from the files alone. Use the [templates](templates/) 
   from the same main all pick the same "next free" number.
 - Iterate on the files: when the user edits or comments, read the change and answer it; don't restate the plan.
 - Task files name the phase's release branch, `release/<slug>-p<n>`, as their base branch (see `gutix:ship`).
-- When the user approves, record it in the roadmap's Log, get the plan files onto main (a docs-only PR the user
-  merges) and **end this session**. New sessions start from the base branch, so a plan that lives only on a side
-  branch is invisible to them. Don't build from here.
+- When the user approves, record it in the roadmap's Log and **end this session**. Don't build from here. A `local`
+  plan needs nothing else: later sessions run in this checkout and workers get the task file by absolute path. A
+  `committed` plan goes onto main first (a docs-only PR the user merges): new sessions start from the base branch,
+  so a plan only on a side branch is invisible to them.
 
 ## 4. Build: `gutix:ship`, in fresh sessions
 Everything after the plan runs through `gutix:ship`, one fresh short session per step: `dispatch` (workers, one per
@@ -86,8 +97,9 @@ write local Markdown only.
    for decisions taken, field names and past estimates. If a doc for this epic exists, ask: update it or start anew.
 3. **Code.** Read only the repos the epic touches, docs first, then code; read the load-bearing files yourself before
    writing a claim. A repo you can't read: plan from the epic and past docs and mark each code claim "unverified".
-4. **Questions.** One batch, only what changes scope, design or estimate, the recommendation first. What the user
-   can't answer becomes an open question with an owner; don't block on it.
+4. **Questions.** One batch, only what changes scope, design or estimate, the recommendation first, numbered; more
+   than four go in rounds, as in step 1's "No question lost". What the user can't answer becomes an open question with
+   an owner; don't block on it.
 5. **Draft.** Write it locally from [refinement.md](templates/refinement.md) (`docs/refinements/<KEY>.md`, or the
    user's notes folder), changes numbered globally, and iterate on the same file; re-read it after the user edits.
 6. **Split and estimate.** One story per app by default; split above about 1.5 of the estimate unit or when it mixes
@@ -103,5 +115,6 @@ Report the doc link and story keys first, then a table (story, app, estimate) wi
 block something, and what could not be done.
 
 ## Report
-The files written (roadmap and tasks, with paths), the phases, decisions taken, what the user must do (secrets,
-dashboards, approvals), and the next step: the `gutix:ship dispatch` session to start once the plan is on main.
+The files written (roadmap and tasks, with absolute paths, and whether the plan is `local` or `committed`), the
+phases, decisions taken, what the user must do (secrets, dashboards, approvals), and the next step: the `gutix:ship
+dispatch` session to start in that checkout (for a `committed` plan, once it is on main).

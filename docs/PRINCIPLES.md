@@ -1,7 +1,7 @@
 # Human ownership: principles
 
-<!-- The bar every gutix change in this feature is measured against. When the plan changes, check the change against
-     this file first; when a principle turns out wrong, change it here with a line in ROADMAP.md's Log. -->
+<!-- The bar every gutix change is measured against. Distilled from the human-ownership plan (2026-11-03, 0.7.0);
+     when a principle turns out wrong, change it here and say why in CHANGELOG.md. -->
 
 ## The problem
 Agents produce more, and more correct-looking, work than one person can read. Without anything forcing attention,
@@ -21,18 +21,25 @@ their part.
 | P3 | The agent shows what it decided, not only what it did. | Defaults, scope cuts and reinterpretations hidden behind "all done". | task Result: decisions not in the spec, assumptions, not verified, where to look. |
 | P4 | Attention goes where the risk is; the rest is judged on evidence. | Reading everything evenly ends in skimming everything. | Review tier per task (`read` / `evidence`) and `Human-read paths` per repo in `.claude/review.md`. |
 | P5 | A green check proves one property. Say which, and say what it doesn't prove. | A passing test with the same bug as the code. | verify and pr-review report what each check proves; the intent-and-tests reviewer compares tests with the spec. |
-| P6 | Nothing merges that I can't explain. The human does the work; the agent only grades it. | Rubber stamping. | gutix:sign-off: attention map, then a quiz the user answers and the agent grades against the code; merge blocked until passed. |
-| P7 | Throughput is capped by my review capacity, not by the agents'. | The orchestration tax: output piling up faster than anyone can stand behind it. | feature-intake dispatch: no new phase while the previous release isn't signed off. |
-| P8 | Coming back to a context reads the decisions since I last looked, not the code. | Context switching resets understanding. | `gutix:sign-off since=<sha>` from the release's last signed-off commit. |
+| P6 | Nothing merges that I can't explain. The human does the work; the agent only grades it. | Rubber stamping. | gutix:sign-off: attention map; with `mode=gate`, a quiz the user answers and the agent grades against the code. Offered before a release merges, never a gate (since 0.9.0). |
+| P7 | Throughput is capped by my review capacity, not by the agents'. | The orchestration tax: output piling up faster than anyone can stand behind it. | No gate since 0.9.0; held as a practice below. |
+| P8 | Coming back to a context reads the decisions since I last looked, not the code. | Context switching resets understanding. | `gutix:sign-off since=<sha>`, from the release line's last signed-off or reviewed commit. |
 | P9 | Taste compounds: when I reject something, the reason becomes something that runs. | The same miss twice. | gutix:learn (already exists). |
 | P10 | A gap I didn't understand stays open until I do. | Accepting a change because I lost the thread one or two changes back. | sign-off carries missed areas into the next sign-off until answered right. |
 | P11 | On hard problems I bring my own judgment, not just a yes. | A complex solution accepted because it sounded right. | feature-intake shows the problem and options before the recommendation and asks my take first. |
 
-## Rules for changing gutix under this feature
+## Rules for changing gutix
 - Every change names the principle and the failure it serves. If it can't, it doesn't go in.
 - Remove as much as you add: every skill line is read in every session that loads it.
 - Agent steps stay in skills; human practices stay here (below). Don't turn a human habit into a mandatory agent step.
 - A skill change ships with an executable check (`claude plugin validate`, a grep, a line cap, a trial run).
+- The model follows the cost of being wrong: mechanical, checkable work (collecting, dispatching, status, running
+  checks) may go to a cheaper model; what decides whether something merges (review, root cause, grading, planning)
+  never does: a mistake there looks right.
+- gutix is public: no names of private projects, companies, clients or their repos; examples stay generic.
+  `scripts/validate.mjs` checks it against a private-names list kept outside the repo.
+- Feature plans are working files, not history: they stay local and only their lasting decisions land in the repo
+  (0.17.0).
 
 ## Practices for me (not agent steps)
 - Before a non-trivial ask, write down what I expect the answer to be, even a bad guess.
@@ -41,6 +48,7 @@ their part.
 - When an agent finishes, read the command and its output before the summary.
 - After a long task: "what did you decide for me, and what didn't you check?"
 - Weekly: one real thing done without an agent (a debug, a small change, a review by hand).
+- Don't start the next phase while I can't explain the last release (P7).
 - Monthly: one line in the Log below on what I stopped doing, and whether I'm fine with that.
 
 ## Calibration log

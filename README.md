@@ -10,8 +10,8 @@ person's daily work, and shared as they are.
 | Skill | What it does |
 | --- | --- |
 | `gutix:triage` | Entry point when the kind or next step is unclear: classifies (bug, feature, product decision), weighs impact, proposes options, records decisions (`docs/decisions/`, review invariants) and hands off. Fast path for clear small bugs. |
-| `gutix:feature-intake` | Turns a requirement into a plan in the repo: challenge, blast radius, a roadmap with contracts and one task file per unit with executable acceptance criteria. Planning only; questions or ops work outside the plan go to a new session. `mode=refinement` turns an epic into a team refinement doc and tracker stories, for the team in the org profile. |
-| `gutix:ship` | Builds the plan in short fresh sessions: `dispatch` (one Sonnet worker per ready task), `integrate` (task PRs squashed into `release/<slug>-p<n>`), `release` (e2e label + pr-review in parallel, merge commit, then archive sessions, delete branches, stop servers), `handoff` (published, in flight, next steps with the prompt to paste) and `status`. |
+| `gutix:feature-intake` | Turns a requirement into a plan in files (local and git-excluded by default): challenge, blast radius, a roadmap with contracts and one task file per unit with executable acceptance criteria. Planning only; questions or ops work outside the plan go to a new session. `mode=refinement` turns an epic into a team refinement doc and tracker stories, for the team in the org profile. |
+| `gutix:ship` | Builds the plan in short fresh sessions: `dispatch` (one Sonnet worker per ready task), `integrate` (task PRs squashed into `release/<slug>-p<n>`), `release` (e2e label + pr-review in parallel; on the last phase, the plan's lasting decisions distilled into `docs/decisions/` and `.claude/review.md`; merge commit, then archive sessions, delete branches and the plan, stop servers), `handoff` (published, in flight, next steps with the prompt to paste) and `status`. |
 | `gutix:bug-fix` | Red test first, root cause, same pattern elsewhere, fix, production data check, close the gap. |
 | `gutix:sign-off` | Catches you up on a release or PR: expected vs built, the agents' decisions, the hunks to read, what the checks don't prove. Brief by default and records nothing; `mode=gate` adds a graded quiz when you ask for it. Never a merge condition. |
 | `gutix:pr-review` | Reviews a PR with one reviewer or a panel of up to 4 by risk area, verifies every finding (critical/high with a failing test), consolidates one ranked list, and fixes the approved ones test-first. Maps the blast radius itself, records the reviewed sha and skips what is already reviewed; reviewers write their reports to `.review/<sha>/` and hand back short summaries. |
@@ -116,7 +116,7 @@ design needs writing up.
 
 Per-repo files the skills maintain: `.claude/verify.md` (how to build and test), `.claude/review.md` (invariants,
 accepted risks and human-read paths). Feature plans start from `skills/feature-intake/templates/` (roadmap, task,
-worker brief). Why sign-off exists and the bar it holds: [PRINCIPLES.md](docs/features/human-ownership/PRINCIPLES.md).
+worker brief). Why sign-off exists and the bar it holds: [PRINCIPLES.md](docs/PRINCIPLES.md).
 
 Decision records: `docs/decisions/` in the repo for one product, in the infra repo (named in the global
 `CLAUDE.md`) for decisions across products.

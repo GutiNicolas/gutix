@@ -56,8 +56,8 @@ tests pass" proves the mapping, not the query against a real schema). Then what 
 - First the **open areas** carried over from the release line: one new question on each.
 - Then 3-5 questions (3 when every task is `evidence` tier): at least one per attention-map area and one "what happens
   when X fails". Each tied to a `file:line`, answerable from the hunk, not from the summary. No yes/no questions.
-- Ask them all, numbered, as plain text in one message (a question tool takes at most four and offers options, which
-  would hint the answer), then wait; grade only once every number has an answer. The agent **never answers its own
+- Ask them all, numbered, as plain text in one message (a question tool offers options, which would hint the
+  answer), then wait; grade only once every number has an answer. The agent **never answers its own
   quiz** and shows no answer or hint before the user has answered: expected answers stay out of every message and
   file until then.
 - Grade each answer against the code: right, partly, or wrong, with the `file:line` that settles it. A partly or

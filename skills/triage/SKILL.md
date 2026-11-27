@@ -30,14 +30,14 @@ If it is clearly a bug with an obvious scope (one repo, no product question, no 
 - Security or data risk: exposure, escalation, loss, wrong results. Any of these raises urgency.
 - Which repos and products it touches; whether it crosses products.
 - Size (hours, days, phases) and urgency (now, this release, backlog).
-Look at the code before judging; do not guess what exists. Anything you could not check is marked "(not verified)"
-in the card.
+Look at the code before judging, with grep and git yourself, no subagents; do not guess what exists. Anything you
+could not check is marked "(not verified)" in the card.
 
 ## 3. Propose (only when there is a real choice)
 Skip this step when the user already decided ("this must never happen"): go to step 4 with their words.
 Two or three options, each with what it costs and what it risks, and one recommendation. Ask only questions whose answer
-changes what happens next. A question tool takes at most four per call: with more, number them all first and ask in
-rounds until each has an answer or a stated default. The user decides.
+changes what happens next, numbered, as in feature-intake's "No question lost": all in one call when the tool takes
+them, else in rounds, until each has an answer or a stated default. The user decides.
 
 ## 4. Record the decision (product decisions and choices between options)
 - One product: `docs/decisions/NNNN-<slug>.md` in the repo that enforces the rule (for several repos of one product, the

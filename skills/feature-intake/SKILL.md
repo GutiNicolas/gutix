@@ -22,17 +22,21 @@ another repo, a "while you're here") goes to a new session, never into this one:
 ## 1. Understand and challenge
 - Restate the goal in one or two sentences, in product terms: who gets what.
 - Before drafting, ask once for the user's **hypothesis** (what they expect to change, and why) and **definition of
-  done**, in their words, and write them into the roadmap as given. If they delegate it, write "delegated" there.
+  done**, in their words, and write them into the roadmap as given. If they delegate it, write "delegated" there. A
+  re-plan whose roadmap already has them: confirm them in one line, don't ask again.
 - Read the code and docs for what already exists (APIs, flows, design docs in `docs/` and the infra repo's
   `docs/app-requests/`). Never plan on assumptions you can check.
 - Challenge: what is unclear, contradictory, risky or more expensive than it looks; a simpler way to the same goal.
   For each point, give your recommendation. Ask only questions whose answer changes the plan; take conventional
   defaults for the rest and say so.
-- **No question lost.** A question tool takes at most four questions per call (Claude Code and Cursor). With more,
-  number them all in the message first, then ask in rounds (or let the user answer the numbered list in text). Before
-  drafting, check each number has an answer or a default you stated; never drop one that didn't fit.
+- **No question lost.** Number every question in the message first. Ask them all in one call when the question tool
+  takes them, else in rounds (Claude Code's takes four), or let the user answer the list in text. Before drafting,
+  check every number has an answer or a stated default: asking part and silently defaulting the rest loses them.
 - A decision with real trade-offs or in a human-read area (here or in step 3): the problem and the options first, ask
   their take, then recommend. Offer to go deeper until they can argue it unaided.
+- **Write as you go:** create the plan folder and roadmap (step 3) right after this step, and add each decision as it
+  is made. Inventories (files, callers, endpoints) go to `<plan>/recon.md`, not the chat. Near ~200k of context, stop
+  researching and write the files.
 
 ## 2. Map the impact (only what applies)
 Start from the code that already exists, with grep and git, no subagents (read a function only where the matching
@@ -68,9 +72,13 @@ that repo's main checkout.
 - `ROADMAP.md`: goal, hypothesis and definition of done (the user's words), decisions (with the reason), contracts
   (API/event shapes, security rules from step 2), the phases with a release line and a status table, open questions.
 - One `tasks/T-<nn>.md` per unit: repo, base branch, scope, contract, and **executable acceptance criteria** (each
-  with the command that proves it, e2e included for user-facing flows). Specific enough that a Sonnet worker builds
-  it without this conversation. Each gets a **Review tier**: `read` when it touches a human-read path
-  (`.claude/review.md`, else gutix:sign-off's default list), `evidence` otherwise.
+  with the command that proves it; for a user-facing flow, its own e2e spec only: the whole e2e and CI run at
+  release, never in a task). Specific enough that a Sonnet worker builds it without this conversation. Each gets a
+  **Review tier**: `read` when it touches a human-read path (`.claude/review.md`, else gutix:sign-off's default list),
+  `evidence` otherwise. A step only the user can do (an approval, a look or listen, a measurement on their machine)
+  goes in its `Gate:` line.
+- Over ~8 tasks: write the shared conventions to `<plan>/conventions.md`, draft the task files with parallel agents
+  (main model) by group, then check every row has a task file and every decision and contract lands in one.
 - Tasks that can run in the same wave and add a migration get their `V<n>` assigned in the task file: workers cut
   from the same main all pick the same "next free" number.
 - Iterate on the files: when the user edits or comments, read the change and answer it; don't restate the plan.
@@ -97,9 +105,8 @@ write local Markdown only.
    for decisions taken, field names and past estimates. If a doc for this epic exists, ask: update it or start anew.
 3. **Code.** Read only the repos the epic touches, docs first, then code; read the load-bearing files yourself before
    writing a claim. A repo you can't read: plan from the epic and past docs and mark each code claim "unverified".
-4. **Questions.** One batch, only what changes scope, design or estimate, the recommendation first, numbered; more
-   than four go in rounds, as in step 1's "No question lost". What the user can't answer becomes an open question with
-   an owner; don't block on it.
+4. **Questions.** One batch, only what changes scope, design or estimate, the recommendation first, asked as in step
+   1's "No question lost". What the user can't answer becomes an open question with an owner; don't block on it.
 5. **Draft.** Write it locally from [refinement.md](templates/refinement.md) (`docs/refinements/<KEY>.md`, or the
    user's notes folder), changes numbered globally, and iterate on the same file; re-read it after the user edits.
 6. **Split and estimate.** One story per app by default; split above about 1.5 of the estimate unit or when it mixes
@@ -116,5 +123,6 @@ block something, and what could not be done.
 
 ## Report
 The files written (roadmap and tasks, with absolute paths, and whether the plan is `local` or `committed`), the
-phases, decisions taken, what the user must do (secrets, dashboards, approvals), and the next step: the `gutix:ship
-dispatch` session to start in that checkout (for a `committed` plan, once it is on main).
+phases, decisions taken, what the user must do (secrets, dashboards, approvals). End with the next step as one line
+to paste, `/gutix:ship dispatch <absolute roadmap path>`, and the checkout to run it in (for a `committed` plan, once
+it is on main).

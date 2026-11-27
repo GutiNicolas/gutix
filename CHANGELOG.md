@@ -1,11 +1,63 @@
 # Changelog
 
+## 0.18.0
+
+- In Cursor a story is one chat, one branch, one PR. `gutix-ship dispatch` creates the story branch and one worktree
+  named after the story, runs the workers itself as background `Task` subagents one after another on that branch
+  (each commits and pushes, no task PRs), and launches the next on each completion notice. After the last task it
+  merges the base if it moved, runs the full check once, opens the PR and ends: no merge, no waiting for CI, no
+  clean-up. Teammates' review comments are fixed on the same branch; `release` is the clean-up after they merge. The
+  user had to say "despachá" twice and ask for the PR by hand, because the override told dispatch to hand out prompts
+  to paste and still inherited the release-branch flow.
+- Dispatch in Cursor asks before the next launch when a worker's Result changes a later task, a contract or the scope;
+  no answer is not consent. A request made mid-run becomes plan work that runs in turn, never in the worktree while a
+  worker is in it.
+- `gutix-feature-intake` gets a Cursor section: the story branch is decided (repo rule, base and PR target written as a
+  `Branch:` line), not asked; hypothesis and definition of done are a round-1 choice, since `AskQuestion` takes choices
+  only; the report hands over one `dispatch` prompt.
+- `ship` finds a roadmap row by its task link, not its status text: matching `| in progress |` hit the wrong row three
+  times in one run.
+- `ship release` no longer archives sessions: it lists them in the Report for the user. The host refuses an agent's
+  archive call, and release sessions retried it in loops or reported "all archived" anyway.
+- `ship integrate` ends with one line, `Dispatch T-<nn>?`, and why it stopped: the host starts sessions only from a
+  turn the user typed, so dispatch stalled after integrate with no word on why. Dispatch names the other refusals (the
+  host's cap, "Trust repository", a missing local branch) and never swaps a worker session for a subagent.
+- `ship` has one rule for a repo without CI (no remote, no workflows, billing failures): run the local check once on
+  the head, log it, treat it as CI; with no remote, release merges into the local main. Sessions improvised each time.
+- The whole e2e and CI suite run once, at release: task criteria name only the task's own e2e spec, and the worker
+  brief says so. Workers each ran the full e2e and queued for 20 minutes on its lock.
+- One step, one session: `ship` checks no other session holds its step, and a notice after the step is done gets one
+  line. Integrate and release sessions grew into orchestrators that picked up other sessions' work.
+- Release review fixes every "fix before merge" finding without asking and asks only about decisions, contracts or
+  scope; the version bump rides in the fix commit. The user answered "fix all" almost every time.
+- A task waiting on the user is a `needs you` row with a `Gate:` line in its task file, and `ship`'s Report starts
+  with a `T-nn | state | PR | waits on` table and ends with the next prompt. Approvals and measurements on the user's
+  machine had no state and were lost between sessions.
+- `feature-intake` writes the roadmap right after step 1 and adds decisions as made, keeps inventories in
+  `recon.md`, stops researching near ~200k, and drafts plans over ~8 tasks from a shared conventions file with
+  parallel agents. Half the large intakes ran out of budget before writing any file.
+- `pr-review` groups a release PR's task commits into at most 4 areas and stops after two rounds: it had started one
+  reviewer per task commit, eight reviewers over three rounds.
+- `ship`, `verify` and `pr-review` wait on long commands with the host's own wait, never a foreground `sleep` or
+  `tail -f`, which the hook blocks and agents retried.
+- Questions: every question is numbered first, asked in one call when the question tool takes them all (Cursor's took
+  eight), else in rounds, and checked against its number before drafting. The skills claimed four per call on every
+  host; what lost questions was asking part of the list and silently defaulting the rest.
+- Smaller: a re-plan confirms the hypothesis and definition of done in one line instead of asking again; the
+  feature-intake Report ends with a paste-ready `/gutix:ship dispatch` line and its checkout; integrate and release
+  remove finished worktrees and their build output; `.claude/review.md` points at code by symbol, not line number;
+  triage reads code with grep and git, not subagents.
+
 ## 0.17.2
 
 - Cursor workers stop polling logs. A Cursor chat gets no completion notice for a background command and has no
   Claude Code hooks, so workers started a check in the background and read its log with `tail` over and over.
   `gutix-ship`'s dispatch now gives each worker prompt Cursor's own rule in place of the brief's background-command
   line: run long checks in the foreground into a log file, read its end once, never poll or `tail -f`.
+- The rule fits how Cursor runs a command: one Shell call whose `block_until_ms` covers the whole check, never `&` or
+  `nohup` (a worker's backgrounded `make verify` died with its call, and the worker polled the log for 20 minutes),
+  and `AwaitShell` or one more long block when a run outlives it. It applies to `Task` subagents too, and the prompt no
+  longer copies a "check on the run after N minutes" repo rule.
 
 ## 0.17.1
 

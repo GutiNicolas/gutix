@@ -72,15 +72,18 @@ panel finds more for its cost is not measured yet.
 | Touches auth/sessions, authorization/tenancy, payments or migrations | A panel: one reviewer per fired risk area (up to 3) + one "intent and tests" reviewer |
 | Over ~5,000 changed lines without those | Split by area, up to 4, without the extra "intent and tests" reviewer (the area reviewers keep the Intent section) |
 
-**Never more than 4 reviewers per round.** More areas than that: merge the closest ones.
+**Never more than 4 reviewers per round.** More areas than that: merge the closest ones. A release PR groups its
+unreviewed task commits into those areas, never one reviewer per commit.
 
 - Areas group by domain (sessions/auth, authorization/tenancy, external surface, data/migrations, front), never by folder
   alone. Migrations go with the area that uses them.
 - Every changed file belongs to exactly one area. Files nobody reviewed are listed as "not reviewed" in the report.
 - Reviewers are Sonnet subagents in the background, in parallel. Use Opus for an area that is security-critical and
-  subtle (crypto, token issuance) if the user agrees on the cost.
+  subtle (crypto, token issuance) if the user agrees on the cost. Wait with the host's own wait (Claude Code: their
+  completion notices), never `sleep`, `tail -f` or a polling loop.
 - **Rounds build on each other.** A second round (after fixes, or new commits) reviews only the new commits, with the
-  previous round's findings and their outcome in the prompt; it does not start over.
+  previous round's findings and their outcome in the prompt; it does not start over. Two rounds at most: after that,
+  list what is left for the user.
 
 ## 3. The reviewer prompt
 Fixed part (copy it):
@@ -136,7 +139,8 @@ in the code, e.g. infrastructure).
   only with the user's yes (`gh pr edit`: it publishes content); otherwise in the roadmap release line
   (`last reviewed: …`) for a release PR, or in the task file's Result for a task PR, committed alone
   (`review: <sha>`) when the plan is committed. Neither exists: say in the report that the next run can't skip it.
-- End with one question: which ones to fix. Fix nothing before the user answers.
+- End with one question: which ones to fix. Fix nothing before the user answers. Under `gutix:ship release`, "fix
+  before merge" findings are already approved: ask only about the rest.
 - A finding the user turns into a product rule ("this must never happen") goes through `gutix:triage` step 4, so it
   is recorded and enforced in future reviews.
 - Never post on the PR without asking: a PR comment publishes content.

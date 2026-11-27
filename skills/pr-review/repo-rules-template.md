@@ -1,6 +1,7 @@
 # Template for `.claude/review.md` (one per repo)
 
 Keep it short: only what a reviewer cannot guess from the code. `pr-review` reads it and passes it to every reviewer.
+Point at code by path and symbol, never by line number: lines move.
 
 ```markdown
 # Review rules: <repo>

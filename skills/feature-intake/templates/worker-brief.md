@@ -4,8 +4,9 @@ Implement `<absolute path of the plan folder>/tasks/T-<nn>.md` in <repo>, starti
   copy the whole Result into the PR body too (the plan folder is deleted when the feature ships; the PR stays).
 
 - Read that task file and the roadmap's Decisions and Contracts; they are the whole spec. Don't re-plan.
-- Run every acceptance criterion yourself and fill the task's "Result" section. Don't edit the roadmap: parallel task
-  PRs conflict on it; the dispatch and integrate sessions keep its rows, and your open PR is the task's status.
+- Run every acceptance criterion yourself, never the whole e2e or CI suite (they run once at release), and fill the
+  task's "Result" section. Don't edit the roadmap: parallel task PRs conflict on it; the dispatch and integrate
+  sessions keep its rows, and your open PR is the task's status.
 - Fill every Result heading; write "none" only when it is true. A default you picked, a cut, or a requirement you
   reinterpreted because two clashed is a decision: list it. "Where to look" names what a human must read, not
   everything you changed.

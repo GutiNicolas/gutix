@@ -2,6 +2,7 @@
 
 - **Roadmap:** ../ROADMAP.md · **Phase:** <n> · **Repo:** <repo> · **Base branch:** release/<slug>-p<n> (PR targets it, not main) · **Branch:** <type>/<slug>
 - **Depends on:** <T-xx integrated | none> · **Model:** sonnet · **Review tier:** <read | evidence> (`read` when it touches a human-read path)
+- **Gate:** <what only the user can do before this counts as done (approve, look or listen, measure on their machine) | none>
 
 ## Goal
 <What exists when this is done, in product terms.>
@@ -25,8 +26,8 @@
 - [ ] <behavior> — `<command that proves it>`
 - [ ] <what must stay exactly as it is> still holds (required regression criterion) — `<existing test or command>`
 - [ ] When <dependency> is down, absent or times out, <it degrades like this and doesn't break the rest> (required dependency failure criterion; "n/a: no dependency" if true) — `<command>`
-- [ ] Unit/integration tests pass — `<command>`
-- [ ] e2e scenario <name> in the product's e2e repo passes — `<command>` (user-facing flows only)
+- [ ] Unit/integration tests for what changed pass — `<command>`
+- [ ] e2e scenario <name> in the product's e2e repo passes — `<command running that spec only>` (user-facing flows only; the whole e2e and CI run at release)
 - [ ] Repo rules: the repo's `CLAUDE.md` and the standards it lists
 
 ## Result (filled by the worker)

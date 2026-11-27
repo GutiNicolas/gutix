@@ -34,6 +34,8 @@ Never skip a check the repo or the task requires because the change looks small.
 
 ## 3. Run and read
 - Run them; read failures from the output, not from memory. Quote the one line that matters, not the whole log.
+  Wait on a long check with the host's own wait (Claude Code: `run_in_background` and its completion notice), never
+  `sleep`, `tail -f` or a polling loop.
 - A failure the change caused: fix it (or hand it to `gutix:bug-fix`) and re-run that check. Still failing after
   three fix attempts on the same failure: stop, report it with what you tried and your best guess, and ask the user.
 - A failure that was already there: confirm on the base branch, in a temporary worktree, before calling it

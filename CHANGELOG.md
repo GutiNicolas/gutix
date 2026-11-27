@@ -34,7 +34,7 @@
   with a `T-nn | state | PR | waits on` table and ends with the next prompt. Approvals and measurements on the user's
   machine had no state and were lost between sessions.
 - `feature-intake` writes the roadmap right after step 1 and adds decisions as made, keeps inventories in
-  `recon.md`, stops researching near ~200k, and drafts plans over ~8 tasks from a shared conventions file with
+  `recon.md`, carries an unfinished research into a fresh session near ~200k (never cuts it short), and drafts plans over ~8 tasks from a shared conventions file with
   parallel agents. Half the large intakes ran out of budget before writing any file.
 - `pr-review` groups a release PR's task commits into at most 4 areas and stops after two rounds: it had started one
   reviewer per task commit, eight reviewers over three rounds.

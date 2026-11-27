@@ -35,8 +35,9 @@ another repo, a "while you're here") goes to a new session, never into this one:
 - A decision with real trade-offs or in a human-read area (here or in step 3): the problem and the options first, ask
   their take, then recommend. Offer to go deeper until they can argue it unaided.
 - **Write as you go:** create the plan folder and roadmap (step 3) right after this step, and add each decision as it
-  is made. Inventories (files, callers, endpoints) go to `<plan>/recon.md`, not the chat. Near ~200k of context, stop
-  researching and write the files.
+  is made. Inventories (files, callers, endpoints) go to `<plan>/recon.md`, not the chat. Research is never cut short
+  for budget: near ~200k of context, write what is still open and where you are into `recon.md`, and continue in a
+  fresh session that starts from the plan folder.
 
 ## 2. Map the impact (only what applies)
 Start from the code that already exists, with grep and git, no subagents (read a function only where the matching
